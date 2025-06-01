@@ -14,9 +14,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, LogIn, UserPlus, Settings, LogOut, Calendar, Crown } from "lucide-react"
 import { useUserData } from "@/hooks/use-user-data"
+import { useRouter } from "next/navigation"
 
 export function AuthNavEnhanced() {
   const { userData, loading, isAuthenticated } = useUserData()
+  const router = useRouter()
 
   if (loading) {
     return <div className="w-8 h-8 bg-slate-700 rounded-full animate-pulse" />
@@ -90,19 +92,21 @@ export function AuthNavEnhanced() {
           <DropdownMenuSeparator className="bg-slate-700" />
 
           {/* Opciones del menú */}
-          <Link href="/perfil">
-            <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 cursor-pointer">
-              <User className="mr-2 h-4 w-4" />
-              <span>Mi Perfil</span>
-            </DropdownMenuItem>
-          </Link>
+          <DropdownMenuItem
+            className="text-slate-300 hover:bg-slate-700 cursor-pointer"
+            onClick={() => router.push("/perfil")}
+          >
+            <User className="mr-2 h-4 w-4" />
+            <span>Mi Perfil</span>
+          </DropdownMenuItem>
 
-          <Link href="/configuracion">
-            <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 cursor-pointer">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Configuración</span>
-            </DropdownMenuItem>
-          </Link>
+          <DropdownMenuItem
+            className="text-slate-300 hover:bg-slate-700 cursor-pointer"
+            onClick={() => router.push("/configuracion")}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Configuración</span>
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator className="bg-slate-700" />
 
