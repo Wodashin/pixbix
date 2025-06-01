@@ -39,55 +39,98 @@ export function useProfile(userId?: string) {
   const fetchProfile = async () => {
     try {
       setLoading(true)
+      setError(null)
 
-      // Si no se proporciona userId, usar el del usuario actual
-      const targetUserId = userId || session?.user?.email
-      if (!targetUserId) return
+      // Si no se proporciona userId, usar el email del usuario actual
+      const targetIdentifier = userId || session?.user?.email
+      if (!targetIdentifier) {
+        setError("No hay usuario para cargar")
+        return
+      }
+
+      console.log("🔍 Buscando perfil para:", targetIdentifier)
 
       // Obtener datos del usuario
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
-        .eq(userId ? "id" : "email", targetUserId)
+        .eq(userId ? "id" : "email", targetIdentifier)
         .single()
 
-      if (userError) throw userError
-
-      // Obtener estadísticas del usuario
-      const [postsCount, likesReceived, commentsCount] = await Promise.all([
-        // Contar posts del usuario
-        supabase
-          .from("posts")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userData.id),
-
-        // Contar likes recibidos en sus posts
-        supabase
-          .from("likes")
-          .select("*", { count: "exact", head: true })
-          .in("post_id", supabase.from("posts").select("id").eq("user_id", userData.id)),
-
-        // Contar comentarios del usuario
-        supabase
-          .from("comments")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userData.id),
-      ])
-
-      const profileData: UserProfile = {
-        ...userData,
-        stats: {
-          posts_count: postsCount.count || 0,
-          likes_received: likesReceived.count || 0,
-          comments_count: commentsCount.count || 0,
-          followers_count: 0, // TODO: Implementar sistema de seguidores
-          following_count: 0, // TODO: Implementar sistema de seguidores
-        },
+      if (userError) {
+        console.error("❌ Error obteniendo usuario:", userError)
+        throw new Error(`Error obteniendo usuario: ${userError.message}`)
       }
 
-      setProfile(profileData)
+      if (!userData) {
+        throw new Error("Usuario no encontrado")
+      }
+
+      console.log("✅ Usuario encontrado:", userData)
+
+      // Obtener estadísticas del usuario de forma segura
+      try {
+        const [postsResult, likesResult, commentsResult] = await Promise.allSettled([
+          // Contar posts del usuario
+          supabase
+            .from("posts")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userData.id),
+
+          // Contar likes recibidos (esto puede fallar si no hay tabla de likes)
+          supabase
+            .from("likes")
+            .select("*", { count: "exact", head: true })
+            .in("post_id", []), // Array vacío por ahora
+
+          // Contar comentarios del usuario
+          supabase
+            .from("comments")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userData.id),
+        ])
+
+        const postsCount = postsResult.status === "fulfilled" ? postsResult.value.count || 0 : 0
+        const likesCount = likesResult.status === "fulfilled" ? likesResult.value.count || 0 : 0
+        const commentsCount = commentsResult.status === "fulfilled" ? commentsResult.value.count || 0 : 0
+
+        const profileData: UserProfile = {
+          ...userData,
+          // Asegurar que los arrays existen
+          gaming_platforms: userData.gaming_platforms || [],
+          favorite_games: userData.favorite_games || [],
+          stats: {
+            posts_count: postsCount,
+            likes_received: likesCount,
+            comments_count: commentsCount,
+            followers_count: 0, // TODO: Implementar sistema de seguidores
+            following_count: 0, // TODO: Implementar sistema de seguidores
+          },
+        }
+
+        console.log("✅ Perfil completo:", profileData)
+        setProfile(profileData)
+      } catch (statsError) {
+        console.warn("⚠️ Error obteniendo estadísticas, usando valores por defecto:", statsError)
+
+        // Si falla obtener estadísticas, crear perfil con stats en 0
+        const profileData: UserProfile = {
+          ...userData,
+          gaming_platforms: userData.gaming_platforms || [],
+          favorite_games: userData.favorite_games || [],
+          stats: {
+            posts_count: 0,
+            likes_received: 0,
+            comments_count: 0,
+            followers_count: 0,
+            following_count: 0,
+          },
+        }
+
+        setProfile(profileData)
+      }
     } catch (err) {
-      console.error("Error fetching profile:", err)
+      console.error("💥 Error general en fetchProfile:", err)
       setError(err instanceof Error ? err.message : "Error desconocido")
     } finally {
       setLoading(false)
@@ -117,7 +160,9 @@ export function useProfile(userId?: string) {
   }
 
   useEffect(() => {
-    fetchProfile()
+    if (session || userId) {
+      fetchProfile()
+    }
   }, [session, userId])
 
   return {
