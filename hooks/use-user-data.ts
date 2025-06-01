@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react"
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/utils/supabase/client"
 
 interface UserData {
   id: string
@@ -23,6 +23,7 @@ export function useUserData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false)
+  const supabase = createClient()
 
   useEffect(() => {
     async function fetchUserData() {
