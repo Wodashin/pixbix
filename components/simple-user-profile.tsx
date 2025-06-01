@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Calendar, MapPin, Crown, Edit } from "lucide-react"
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
@@ -19,41 +19,52 @@ export function SimpleUserProfile() {
   const [error, setError] = useState<string | null>(null)
 
   // Usar useCallback para evitar recrear la función en cada render
-  const fetchUserData = useCallback(async () => {
-    if (status === "loading" || !session?.user?.email) return
-
-    try {
-      console.log("Obteniendo datos del usuario:", session.user.email)
-      setLoading(true)
-
-      const supabase = createClient()
-      const { data, error: supabaseError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", session.user.email)
-        .single()
-
-      if (supabaseError) {
-        console.error("Error al obtener datos:", supabaseError)
-        setError(supabaseError.message)
-      } else {
-        console.log("Datos obtenidos:", data)
-        setUserData(data)
-      }
-    } catch (err) {
-      console.error("Error general:", err)
-      setError(err instanceof Error ? err.message : "Error desconocido")
-    } finally {
-      setLoading(false)
-    }
-  }, [session?.user?.email, status])
+  // Modificar el useEffect para evitar recargas innecesarias
 
   useEffect(() => {
-    // Solo ejecutar cuando cambie la sesión o el estado de la sesión
+    // Usar una referencia para evitar múltiples solicitudes
+    const fetchedRef = { current: false }
+
+    async function fetchUserData() {
+      if (status === "loading") return
+
+      if (!session?.user?.email || fetchedRef.current) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        console.log("Obteniendo datos del usuario:", session.user.email)
+        setLoading(true)
+        fetchedRef.current = true
+
+        const supabase = createClient()
+        const { data, error: supabaseError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("email", session.user.email)
+          .single()
+
+        if (supabaseError) {
+          console.error("Error al obtener datos:", supabaseError)
+          setError(supabaseError.message)
+        } else {
+          console.log("Datos obtenidos:", data)
+          setUserData(data)
+        }
+      } catch (err) {
+        console.error("Error general:", err)
+        setError(err instanceof Error ? err.message : "Error desconocido")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Solo ejecutar una vez cuando cambie la sesión
     if (status !== "loading") {
       fetchUserData()
     }
-  }, [fetchUserData, status])
+  }, [session?.user?.email, status]) // Dependencias más específicas para evitar loops
 
   if (status === "loading" || loading) {
     return (
