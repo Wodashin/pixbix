@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Calendar, MapPin, Mail, Crown, Edit } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Loader2, Calendar, MapPin, Crown, Edit } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
+import Link from "next/link"
 
 export function SimpleUserProfile() {
   const { data: session, status } = useSession()
@@ -17,47 +18,42 @@ export function SimpleUserProfile() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchUserData() {
-      if (status === "loading") return
+  // Usar useCallback para evitar recrear la función en cada render
+  const fetchUserData = useCallback(async () => {
+    if (status === "loading" || !session?.user?.email) return
 
-      if (!session?.user?.email) {
-        setLoading(false)
-        setError("No hay sesión activa")
-        return
+    try {
+      console.log("Obteniendo datos del usuario:", session.user.email)
+      setLoading(true)
+
+      const supabase = createClient()
+      const { data, error: supabaseError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", session.user.email)
+        .single()
+
+      if (supabaseError) {
+        console.error("Error al obtener datos:", supabaseError)
+        setError(supabaseError.message)
+      } else {
+        console.log("Datos obtenidos:", data)
+        setUserData(data)
       }
-
-      try {
-        console.log("Obteniendo datos del usuario:", session.user.email)
-        setLoading(true)
-
-        const supabase = createClient()
-        const { data, error: supabaseError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", session.user.email)
-          .single()
-
-        if (supabaseError) {
-          console.error("Error al obtener datos:", supabaseError)
-          setError(supabaseError.message)
-        } else {
-          console.log("Datos obtenidos:", data)
-          setUserData(data)
-        }
-      } catch (err) {
-        console.error("Error general:", err)
-        setError(err instanceof Error ? err.message : "Error desconocido")
-      } finally {
-        setLoading(false)
-      }
+    } catch (err) {
+      console.error("Error general:", err)
+      setError(err instanceof Error ? err.message : "Error desconocido")
+    } finally {
+      setLoading(false)
     }
+  }, [session?.user?.email, status])
 
-    // Solo ejecutar una vez cuando cambie la sesión
+  useEffect(() => {
+    // Solo ejecutar cuando cambie la sesión o el estado de la sesión
     if (status !== "loading") {
       fetchUserData()
     }
-  }, [session?.user?.email, status]) // Dependencias más específicas para evitar loops
+  }, [fetchUserData, status])
 
   if (status === "loading" || loading) {
     return (
@@ -153,34 +149,33 @@ export function SimpleUserProfile() {
 
               <div className="flex flex-col md:flex-row items-center md:items-start space-y-2 md:space-y-0 md:space-x-4 text-slate-400 mb-4">
                 <div className="flex items-center space-x-1">
-                  <Mail className="w-4 h-4" />
-                  <span>{userData.email}</span>
-                </div>
-                <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
                   <span>Miembro {memberSince}</span>
                 </div>
+                {userData.location && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{userData.location}</span>
+                  </div>
+                )}
               </div>
 
               {userData.bio && <p className="text-slate-300 mb-4 max-w-md">{userData.bio}</p>}
-
-              {userData.location && (
-                <div className="flex items-center justify-center md:justify-start space-x-1 text-slate-400 mb-4">
-                  <MapPin className="w-4 h-4" />
-                  <span>{userData.location}</span>
-                </div>
-              )}
             </div>
 
             {/* Botón de editar */}
             <div className="flex flex-col space-y-2">
-              <Button className="bg-cyan-600 hover:bg-cyan-700">
-                <Edit className="mr-2 h-4 w-4" />
-                Editar Perfil
-              </Button>
-              <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
-                Configuración
-              </Button>
+              <Link href="/editar-perfil">
+                <Button className="bg-cyan-600 hover:bg-cyan-700">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar Perfil
+                </Button>
+              </Link>
+              <Link href="/configuracion">
+                <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                  Configuración
+                </Button>
+              </Link>
             </div>
           </div>
         </CardContent>
