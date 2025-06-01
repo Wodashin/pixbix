@@ -5,35 +5,39 @@ console.log("🌐 URL:", process.env.NEXT_PUBLIC_SUPABASE_URL)
 console.log("🔑 Anon Key existe:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 console.log("🔑 Service Role Key existe:", !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error("❌ Faltan variables de entorno de Supabase")
+// Verificar variables críticas
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error("❌ Faltan variables críticas de Supabase")
+  throw new Error("Variables de entorno de Supabase no configuradas")
 }
 
-// Cliente para el servidor (con permisos completos) - CONFIGURACIÓN CORREGIDA
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+// Cliente para el cliente (solo lectura) - SIEMPRE disponible
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false,
+    persistSession: true,
+    autoRefreshToken: true,
   },
-  db: {
-    schema: "public",
-  },
-  // Removemos la configuración de fetch personalizada que causaba problemas
 })
 
-// Cliente para el cliente (solo lectura)
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  },
-)
+// Cliente para el servidor (con permisos completos) - OPCIONAL
+export const supabaseAdmin = supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      db: {
+        schema: "public",
+      },
+    })
+  : null
+
+// Función helper para verificar si el admin está disponible
+export const isAdminAvailable = () => !!supabaseAdmin
 
 console.log("✅ Supabase configurado correctamente")
+console.log("🔧 Admin disponible:", isAdminAvailable())
