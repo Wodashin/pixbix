@@ -1,6 +1,7 @@
 import type React from "react"
 import { Providers } from "@/components/providers"
 import { AuthFeedback } from "@/components/auth-feedback"
+import { ProfileCompletionHandler } from "@/components/profile-completion-handler"
 import { Inter } from "next/font/google"
 import "./globals.css"
 
@@ -16,6 +17,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <AuthFeedback />
+          <ProfileCompletionHandler />
           {children}
         </Providers>
       </body>
