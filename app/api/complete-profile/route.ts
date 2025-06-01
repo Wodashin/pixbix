@@ -1,8 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabaseAdmin } from "@/lib/supabase"
+import { supabaseAdmin, isAdminAvailable } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isAdminAvailable()) {
+      return NextResponse.json({ error: "Servicio no disponible temporalmente" }, { status: 503 })
+    }
+
     const { email, real_name } = await request.json()
 
     if (!email || !real_name) {
@@ -10,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar el perfil del usuario
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin!
       .from("users")
       .update({
         real_name: real_name.trim(),
