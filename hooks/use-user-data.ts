@@ -23,7 +23,6 @@ export function useUserData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false)
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchUserData() {
@@ -36,6 +35,7 @@ export function useUserData() {
 
       try {
         setLoading(true)
+        const supabase = createClient()
         const { data, error } = await supabase.from("users").select("*").eq("email", session.user.email).single()
 
         if (error) {
@@ -43,7 +43,6 @@ export function useUserData() {
           setError(error.message)
         } else {
           setUserData(data)
-          // Verificar si necesita completar perfil
           setNeedsProfileCompletion(!data.profile_completed)
         }
       } catch (err) {
@@ -61,6 +60,7 @@ export function useUserData() {
     if (!session?.user?.email) return
 
     try {
+      const supabase = createClient()
       const { data, error } = await supabase.from("users").select("*").eq("email", session.user.email).single()
 
       if (error) {
