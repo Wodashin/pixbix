@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from "next-auth/react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { createClient } from "@/utils/supabase/client"
 
 interface UserData {
@@ -24,17 +24,23 @@ export function useUserData() {
   const [error, setError] = useState<string | null>(null)
   const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false)
 
+  // Usar una referencia para evitar múltiples solicitudes
+  const fetchedRef = useRef(false)
+
   useEffect(() => {
     async function fetchUserData() {
       if (status === "loading") return
 
-      if (!session?.user?.email) {
+      // Si ya obtuvimos los datos o no hay sesión, no hacer nada
+      if (fetchedRef.current || !session?.user?.email) {
         setLoading(false)
         return
       }
 
       try {
         setLoading(true)
+        fetchedRef.current = true
+
         const supabase = createClient()
         const { data, error } = await supabase.from("users").select("*").eq("email", session.user.email).single()
 
