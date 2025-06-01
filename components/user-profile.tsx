@@ -23,6 +23,8 @@ import {
   Gamepad2,
   Star,
   Crown,
+  AlertCircle,
+  Loader2,
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
@@ -33,16 +35,38 @@ interface UserProfileProps {
 
 export function UserProfile({ userId }: UserProfileProps) {
   const { data: session } = useSession()
-  const { profile, loading, updateProfile } = useProfile(userId)
+  const { profile, loading, error, updateProfile } = useProfile(userId)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("posts")
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-6">
-          <div className="h-48 bg-slate-800 rounded-lg"></div>
-          <div className="h-32 bg-slate-800 rounded-lg"></div>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-purple-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-white mb-2">Cargando perfil...</h2>
+            <p className="text-slate-400">Obteniendo información del usuario</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Card className="bg-slate-800 border-slate-700 max-w-md">
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">Error al cargar perfil</h2>
+              <p className="text-slate-400 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
+                Intentar de nuevo
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     )
@@ -50,9 +74,23 @@ export function UserProfile({ userId }: UserProfileProps) {
 
   if (!profile) {
     return (
-      <div className="container mx-auto px-4 py-8 text-center">
-        <h1 className="text-2xl font-bold text-white mb-4">Usuario no encontrado</h1>
-        <p className="text-slate-400">El perfil que buscas no existe o no está disponible.</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Card className="bg-slate-800 border-slate-700 max-w-md">
+            <CardContent className="p-8 text-center">
+              <Users className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-white mb-2">Usuario no encontrado</h2>
+              <p className="text-slate-400 mb-4">El perfil que buscas no existe o no está disponible.</p>
+              <Button
+                onClick={() => window.history.back()}
+                variant="outline"
+                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              >
+                Volver atrás
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -74,13 +112,13 @@ export function UserProfile({ userId }: UserProfileProps) {
               <Avatar className="h-32 w-32 border-4 border-cyan-400">
                 <AvatarImage src={profile.avatar_url || "/placeholder.svg"} alt={profile.real_name} />
                 <AvatarFallback className="bg-slate-700 text-cyan-400 text-4xl">
-                  {profile.real_name?.[0]?.toUpperCase()}
+                  {(profile.real_name || profile.name)?.[0]?.toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
               <div className="space-y-2">
                 <div className="flex items-center space-x-3">
-                  <h1 className="text-3xl font-bold text-white">{profile.real_name}</h1>
+                  <h1 className="text-3xl font-bold text-white">{profile.real_name || profile.name}</h1>
                   <Badge className="bg-purple-600 text-white">
                     <Crown className="w-3 h-3 mr-1" />
                     Gamer
