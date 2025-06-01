@@ -19,7 +19,6 @@ const handler = NextAuth({
       if (user) {
         token.id = user.id
         token.provider = account?.provider
-        token.isNewUser = account?.isNewUser || false
       }
       return token
     },
@@ -27,13 +26,18 @@ const handler = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.provider = token.provider as string
-        session.user.isNewUser = token.isNewUser as boolean
       }
       return session
     },
     async signIn({ user, account, profile }) {
       try {
-        console.log("🔄 INICIANDO proceso de autenticación...")
+        console.log("🔄 INICIANDO proceso de guardado en Supabase...")
+        console.log("📋 Datos del usuario:", {
+          provider: account?.provider,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        })
 
         // Verificar si el usuario ya existe
         const { data: existingUser, error: fetchError } = await supabaseAdmin
@@ -56,7 +60,6 @@ const handler = NextAuth({
             .update({
               name: user.name,
               avatar_url: user.image,
-              last_provider: account?.provider,
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingUser.id)
@@ -66,11 +69,6 @@ const handler = NextAuth({
           } else {
             console.log("✅ Usuario actualizado exitosamente")
           }
-
-          // Marcar como usuario existente
-          if (account) {
-            account.isNewUser = false
-          }
         } else {
           console.log("🆕 Creando nuevo usuario...")
 
@@ -78,7 +76,6 @@ const handler = NextAuth({
             email: user.email,
             name: user.name,
             avatar_url: user.image,
-            provider: account?.provider,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
@@ -89,10 +86,6 @@ const handler = NextAuth({
             console.error("❌ ERROR creando usuario:", insertError)
           } else {
             console.log("🎉 ¡USUARIO CREADO EXITOSAMENTE!")
-            // Marcar como usuario nuevo
-            if (account) {
-              account.isNewUser = true
-            }
           }
         }
 
@@ -110,15 +103,57 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
-  events: {
-    async signIn({ user, account, isNewUser }) {
-      console.log(`🎯 Usuario ${isNewUser ? "nuevo" : "existente"} logueado:`, {
-        email: user.email,
-        provider: account?.provider,
-        isNewUser,
-      })
+  // Configuración mejorada de cookies para producción
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15, // 15 minutes
+      },
+    },
+    state: {
+      name: `next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 15, // 15 minutes
+      },
     },
   },
+  // Configuración adicional para debugging
+  debug: process.env.NODE_ENV === "development",
 })
 
 export { handler as GET, handler as POST }
