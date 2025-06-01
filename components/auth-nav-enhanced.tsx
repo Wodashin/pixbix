@@ -20,6 +20,13 @@ export function AuthNavEnhanced() {
   const { userData, loading, isAuthenticated } = useUserData()
   const router = useRouter()
 
+  const handleProfileClick = () => {
+    console.log("🔍 Haciendo clic en Mi Perfil...")
+    console.log("📍 Navegando a /perfil")
+    router.push("/perfil")
+    console.log("✅ router.push ejecutado")
+  }
+
   if (loading) {
     return <div className="w-8 h-8 bg-slate-700 rounded-full animate-pulse" />
   }
@@ -92,17 +99,17 @@ export function AuthNavEnhanced() {
           <DropdownMenuSeparator className="bg-slate-700" />
 
           {/* Opciones del menú */}
-          <DropdownMenuItem
-            className="text-slate-300 hover:bg-slate-700 cursor-pointer"
-            onClick={() => router.push("/perfil")}
-          >
+          <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 cursor-pointer" onClick={handleProfileClick}>
             <User className="mr-2 h-4 w-4" />
             <span>Mi Perfil</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
             className="text-slate-300 hover:bg-slate-700 cursor-pointer"
-            onClick={() => router.push("/configuracion")}
+            onClick={() => {
+              console.log("🔍 Haciendo clic en Configuración...")
+              router.push("/configuracion")
+            }}
           >
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuración</span>
