@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, AtSign, Loader2 } from "lucide-react"
+import { useUserData } from "@/hooks/use-user-data"
 
 interface CompleteProfileModalProps {
   isOpen: boolean
@@ -29,6 +30,7 @@ export function CompleteProfileModal({ isOpen, onClose, userData }: CompleteProf
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { data: session } = useSession()
   const router = useRouter()
+  const { refreshUserData } = useUserData()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,6 +51,8 @@ export function CompleteProfileModal({ isOpen, onClose, userData }: CompleteProf
       })
 
       if (response.ok) {
+        // Actualizar los datos del usuario después de completar el perfil
+        await refreshUserData()
         onClose()
         router.refresh()
       } else {
