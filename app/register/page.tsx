@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { Gamepad2, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
+import { Gamepad2, Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
@@ -18,13 +18,68 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const router = useRouter()
 
   const handleRegister = async (formData: FormData) => {
     setIsLoading(true)
-    // Aquí iría la lógica de registro manual
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulación
-    setIsLoading(false)
+    setError("")
+    setSuccess("")
+
+    const username = formData.get("username") as string
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+    const confirmPassword = formData.get("confirmPassword") as string
+
+    // Validaciones del lado del cliente
+    if (!username || !email || !password || !confirmPassword) {
+      setError("Todos los campos son requeridos")
+      setIsLoading(false)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden")
+      setIsLoading(false)
+      return
+    }
+
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+          confirmPassword,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccess("¡Cuenta creada exitosamente! Redirigiendo...")
+        setTimeout(() => {
+          router.push("/login")
+        }, 2000)
+      } else {
+        setError(data.message || "Error al crear la cuenta")
+      }
+    } catch (err) {
+      setError("Error de conexión. Inténtalo de nuevo.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGoogleRegister = async () => {
@@ -79,6 +134,20 @@ export default function RegisterPage() {
               <CardTitle className="text-white text-center">Crear Cuenta</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Mensajes de error y éxito */}
+              {error && (
+                <div className="bg-red-900/20 border border-red-700 rounded-lg p-3 flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400 text-sm">{error}</span>
+                </div>
+              )}
+
+              {success && (
+                <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
+                  <span className="text-green-400 text-sm">{success}</span>
+                </div>
+              )}
+
               {/* Social Register */}
               <div className="space-y-3">
                 <Button
@@ -138,6 +207,7 @@ export default function RegisterPage() {
                       placeholder="tu_nombre_gamer"
                       className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -155,6 +225,7 @@ export default function RegisterPage() {
                       placeholder="tu@email.com"
                       className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
                       required
+                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -172,11 +243,13 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       className="pl-10 pr-10 bg-slate-700 border-slate-600 text-slate-100"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                      disabled={isLoading}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -196,11 +269,13 @@ export default function RegisterPage() {
                       placeholder="••••••••"
                       className="pl-10 pr-10 bg-slate-700 border-slate-600 text-slate-100"
                       required
+                      disabled={isLoading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                      disabled={isLoading}
                     >
                       {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -208,7 +283,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="terms" className="border-slate-600" />
+                  <Checkbox id="terms" className="border-slate-600" disabled={isLoading} />
                   <Label htmlFor="terms" className="text-sm text-slate-300">
                     Acepto los{" "}
                     <Link href="/terms" className="text-purple-400 hover:text-purple-300">
