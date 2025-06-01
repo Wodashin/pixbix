@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { supabaseAdmin, isAdminAvailable } from "@/lib/supabase"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isAdminAvailable()) {
+      return NextResponse.json({ error: "Servicio no disponible temporalmente" }, { status: 503 })
+    }
+
     const { username, email, password, confirmPassword } = await request.json()
 
     // Validaciones básicas
@@ -20,33 +26,68 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Aquí iría la lógica para:
-    // 1. Verificar si el email ya existe
-    // 2. Hash de la contraseña
-    // 3. Guardar en la base de datos
-    // 4. Enviar email de verificación
+    // Verificar si el email ya existe
+    const { data: existingUser, error: checkError } = await supabaseAdmin!
+      .from("users")
+      .select("email")
+      .eq("email", email)
+      .single()
 
-    // Simulación de registro exitoso
-    const response = NextResponse.json({
+    if (existingUser) {
+      return NextResponse.json({ success: false, message: "Este email ya está registrado" }, { status: 400 })
+    }
+
+    // Verificar si el username ya existe
+    const { data: existingUsername, error: usernameError } = await supabaseAdmin!
+      .from("users")
+      .select("username")
+      .eq("username", username.toLowerCase())
+      .single()
+
+    if (existingUsername) {
+      return NextResponse.json({ success: false, message: "Este nombre de usuario ya está en uso" }, { status: 400 })
+    }
+
+    // Hash de la contraseña
+    const saltRounds = 12
+    const passwordHash = await bcrypt.hash(password, saltRounds)
+
+    // Crear el usuario
+    const userData = {
+      email: email.toLowerCase(),
+      username: username.toLowerCase(),
+      display_name: username,
+      name: username,
+      real_name: "", // Se completará después
+      password_hash: passwordHash,
+      avatar_url: null,
+      profile_completed: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data: newUser, error: insertError } = await supabaseAdmin!
+      .from("users")
+      .insert([userData])
+      .select()
+      .single()
+
+    if (insertError) {
+      console.error("Error creando usuario:", insertError)
+      return NextResponse.json({ success: false, message: "Error al crear la cuenta" }, { status: 500 })
+    }
+
+    return NextResponse.json({
       success: true,
       message: "Cuenta creada exitosamente",
       user: {
-        id: "new-user-id",
-        username: username,
-        email: email,
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
       },
     })
-
-    // Establecer cookie de sesión
-    response.cookies.set("auth-token", "fake-jwt-token-new-user", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 días
-    })
-
-    return response
   } catch (error) {
+    console.error("Error en registro:", error)
     return NextResponse.json({ success: false, message: "Error interno del servidor" }, { status: 500 })
   }
 }
