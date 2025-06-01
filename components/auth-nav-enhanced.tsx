@@ -20,13 +20,6 @@ export function AuthNavEnhanced() {
   const { userData, loading, isAuthenticated } = useUserData()
   const router = useRouter()
 
-  // Función para manejar la navegación al perfil
-  const handleProfileClick = () => {
-    console.log("🔍 Navegando a /perfil")
-    // Usar Link en lugar de router.push para evitar problemas de navegación
-    window.location.href = "/perfil"
-  }
-
   if (loading) {
     return <div className="w-8 h-8 bg-slate-700 rounded-full animate-pulse" />
   }
@@ -98,20 +91,20 @@ export function AuthNavEnhanced() {
 
           <DropdownMenuSeparator className="bg-slate-700" />
 
-          {/* Opciones del menú */}
-          <Link href="/perfil" passHref>
+          {/* Opciones del menú - Usando enlaces HTML directos */}
+          <a href="/perfil" className="block w-full">
             <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               <span>Mi Perfil</span>
             </DropdownMenuItem>
-          </Link>
+          </a>
 
-          <Link href="/configuracion" passHref>
+          <a href="/configuracion" className="block w-full">
             <DropdownMenuItem className="text-slate-300 hover:bg-slate-700 cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               <span>Configuración</span>
             </DropdownMenuItem>
-          </Link>
+          </a>
 
           <DropdownMenuSeparator className="bg-slate-700" />
 
