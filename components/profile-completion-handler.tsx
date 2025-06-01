@@ -11,12 +11,19 @@ export function ProfileCompletionHandler() {
   useEffect(() => {
     // Solo mostrar el modal cuando tengamos los datos y sepamos que necesita completar el perfil
     if (isAuthenticated && !loading && needsProfileCompletion && userData) {
-      // Mostrar modal después de 2 segundos para mejor UX
-      const timer = setTimeout(() => {
-        setShowModal(true)
-      }, 2000)
+      // Verificar si ya mostramos el modal en esta sesión del navegador
+      const profileModalShown = localStorage.getItem("profile_modal_shown")
 
-      return () => clearTimeout(timer)
+      if (!profileModalShown) {
+        // Mostrar modal después de 2 segundos para mejor UX
+        const timer = setTimeout(() => {
+          setShowModal(true)
+          // Marcar como mostrado para esta sesión
+          localStorage.setItem("profile_modal_shown", "true")
+        }, 2000)
+
+        return () => clearTimeout(timer)
+      }
     }
   }, [isAuthenticated, needsProfileCompletion, userData, loading])
 
