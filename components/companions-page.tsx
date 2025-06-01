@@ -30,20 +30,20 @@ const languages = ["Español", "Inglés", "Portugués", "Francés", "Alemán", "
 
 export function CompanionsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedGame, setSelectedGame] = useState("")
-  const [selectedService, setSelectedService] = useState("")
+  const [selectedGame, setSelectedGame] = useState("all")
+  const [selectedService, setSelectedService] = useState("all")
   const [priceRange, setPriceRange] = useState<[number, number]>([5, 100])
   const [minRating, setMinRating] = useState(0)
-  const [selectedLanguage, setSelectedLanguage] = useState("")
+  const [selectedLanguage, setSelectedLanguage] = useState("all")
   const [sortBy, setSortBy] = useState<"rating" | "price" | "sessions" | "recent">("rating")
   const [showFilters, setShowFilters] = useState(false)
 
   const { companions, loading, error, totalCount } = useCompanions({
-    gameFilter: selectedGame,
-    serviceFilter: selectedService,
+    gameFilter: selectedGame === "all" ? undefined : selectedGame,
+    serviceFilter: selectedService === "all" ? undefined : selectedService,
     priceRange: priceRange,
     ratingFilter: minRating,
-    languageFilter: selectedLanguage,
+    languageFilter: selectedLanguage === "all" ? undefined : selectedLanguage,
     sortBy: sortBy,
   })
 
@@ -54,11 +54,11 @@ export function CompanionsPage() {
 
   const clearFilters = () => {
     setSearchTerm("")
-    setSelectedGame("")
-    setSelectedService("")
+    setSelectedGame("all")
+    setSelectedService("all")
     setPriceRange([5, 100])
     setMinRating(0)
-    setSelectedLanguage("")
+    setSelectedLanguage("all")
     setSortBy("rating")
   }
 
@@ -154,7 +154,7 @@ export function CompanionsPage() {
                     <SelectValue placeholder="Todos los juegos" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="">Todos los juegos</SelectItem>
+                    <SelectItem value="all">Todos los juegos</SelectItem>
                     {popularGames.map((game) => (
                       <SelectItem key={game} value={game}>
                         {game}
@@ -172,7 +172,7 @@ export function CompanionsPage() {
                     <SelectValue placeholder="Todos los servicios" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="">Todos los servicios</SelectItem>
+                    <SelectItem value="all">Todos los servicios</SelectItem>
                     <SelectItem value="gaming">Gaming</SelectItem>
                     <SelectItem value="chat">Chat</SelectItem>
                     <SelectItem value="coaching">Coaching</SelectItem>
@@ -204,7 +204,7 @@ export function CompanionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="any">Cualquier rating</SelectItem>
+                    <SelectItem value="0">Cualquier rating</SelectItem>
                     <SelectItem value="3">3+ estrellas</SelectItem>
                     <SelectItem value="4">4+ estrellas</SelectItem>
                     <SelectItem value="4.5">4.5+ estrellas</SelectItem>
@@ -220,7 +220,7 @@ export function CompanionsPage() {
                     <SelectValue placeholder="Todos los idiomas" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="">Todos los idiomas</SelectItem>
+                    <SelectItem value="all">Todos los idiomas</SelectItem>
                     {languages.map((lang) => (
                       <SelectItem key={lang} value={lang}>
                         {lang}
@@ -256,28 +256,28 @@ export function CompanionsPage() {
           </div>
 
           {/* Filtros activos */}
-          {(selectedGame || selectedService || selectedLanguage || minRating > 0) && (
+          {(selectedGame !== "all" || selectedService !== "all" || selectedLanguage !== "all" || minRating > 0) && (
             <div className="flex flex-wrap gap-2 mb-6">
-              {selectedGame && (
+              {selectedGame !== "all" && (
                 <Badge variant="secondary" className="bg-slate-700">
                   Juego: {selectedGame}
-                  <button onClick={() => setSelectedGame("")} className="ml-2 hover:text-red-400">
+                  <button onClick={() => setSelectedGame("all")} className="ml-2 hover:text-red-400">
                     ×
                   </button>
                 </Badge>
               )}
-              {selectedService && (
+              {selectedService !== "all" && (
                 <Badge variant="secondary" className="bg-slate-700">
                   Servicio: {selectedService}
-                  <button onClick={() => setSelectedService("")} className="ml-2 hover:text-red-400">
+                  <button onClick={() => setSelectedService("all")} className="ml-2 hover:text-red-400">
                     ×
                   </button>
                 </Badge>
               )}
-              {selectedLanguage && (
+              {selectedLanguage !== "all" && (
                 <Badge variant="secondary" className="bg-slate-700">
                   Idioma: {selectedLanguage}
-                  <button onClick={() => setSelectedLanguage("")} className="ml-2 hover:text-red-400">
+                  <button onClick={() => setSelectedLanguage("all")} className="ml-2 hover:text-red-400">
                     ×
                   </button>
                 </Badge>
