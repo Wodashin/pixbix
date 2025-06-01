@@ -59,11 +59,11 @@ export function useCompanions(options: UseCompanionsOptions = {}) {
         query = query.gte("hourly_rate", priceRange[0]).lte("hourly_rate", priceRange[1])
       }
 
-      if (ratingFilter) {
+      if (ratingFilter && ratingFilter > 0) {
         query = query.gte("average_rating", ratingFilter)
       }
 
-      if (languageFilter) {
+      if (languageFilter && languageFilter !== "all") {
         query = query.contains("languages", [languageFilter])
       }
 
@@ -102,7 +102,7 @@ export function useCompanions(options: UseCompanionsOptions = {}) {
 
           // Obtener juegos
           let games: any[] = []
-          if (gameFilter) {
+          if (gameFilter && gameFilter !== "all") {
             const { data: gameData } = await supabase
               .from("companion_games")
               .select("*")
@@ -150,14 +150,14 @@ export function useCompanions(options: UseCompanionsOptions = {}) {
 
       // Filtrar por juego si es necesario (después de obtener los datos)
       let filteredCompanions = companionsWithDetails
-      if (gameFilter) {
+      if (gameFilter && gameFilter !== "all") {
         filteredCompanions = companionsWithDetails.filter((companion) =>
           companion.games.some((game) => game.game_name.toLowerCase().includes(gameFilter.toLowerCase())),
         )
       }
 
       // Filtrar por tipo de servicio
-      if (serviceFilter) {
+      if (serviceFilter && serviceFilter !== "all") {
         filteredCompanions = filteredCompanions.filter((companion) =>
           companion.services.some((service) => service.service_type === serviceFilter),
         )
