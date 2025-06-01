@@ -1,6 +1,7 @@
 "use client"
 
 import { signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +15,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { User, LogIn, UserPlus, Settings, LogOut, Calendar, Crown } from "lucide-react"
 import { useUserData } from "@/hooks/use-user-data"
-import { useRouter } from "next/navigation"
 
 export function AuthNavEnhanced() {
   const { userData, loading, isAuthenticated } = useUserData()
