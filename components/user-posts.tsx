@@ -1,108 +1,112 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { createClient } from "@/utils/supabase/client"
-import { PostCard } from "./post-card"
-import { usePosts } from "@/hooks/use-posts"
-import { Loader2, FileText } from "lucide-react"
-import type { Post } from "@/hooks/use-posts"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Heart, MessageCircle, Share2 } from "lucide-react"
+import { formatDistanceToNow } from "date-fns"
+import { es } from "date-fns/locale"
 
-interface UserPostsProps {
-  userId: string
+export interface ProfilePost {
+  id: string
+  user_id: string
+  content: string
+  image_url?: string
+  tags?: string[]
+  created_at: string
+  updated_at: string
+  user?: {
+    name: string
+    image: string
+  }
+  likes_count?: number
+  comments_count?: number
+  user_has_liked?: boolean
 }
 
-export function UserPosts({ userId }: UserPostsProps) {
-  const [userPosts, setUserPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-  const { toggleLike } = usePosts()
-  const supabase = createClient()
+interface ProfilePostCardProps {
+  post: ProfilePost
+  onLike: (postId: string) => void
+}
 
-  useEffect(() => {
-    const fetchUserPosts = async () => {
-      try {
-        setLoading(true)
-
-        // Obtener posts del usuario específico
-        const { data: postsData, error: postsError } = await supabase
-          .from("posts")
-          .select(`
-            *,
-            users!posts_user_id_fkey (
-              name,
-              real_name,
-              username,
-              avatar_url
-            )
-          `)
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-
-        if (postsError) throw postsError
-
-        // Para cada post, obtener conteo de likes y comentarios
-        const postsWithCounts = await Promise.all(
-          postsData.map(async (post) => {
-            // Contar likes
-            const { count: likesCount } = await supabase
-              .from("likes")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", post.id)
-
-            // Contar comentarios
-            const { count: commentsCount } = await supabase
-              .from("comments")
-              .select("*", { count: "exact", head: true })
-              .eq("post_id", post.id)
-
-            return {
-              ...post,
-              user: {
-                name: post.users.real_name || post.users.name,
-                image: post.users.avatar_url,
-              },
-              likes_count: likesCount || 0,
-              comments_count: commentsCount || 0,
-              user_has_liked: false, // TODO: Verificar si el usuario actual ha dado like
-            }
-          }),
-        )
-
-        setUserPosts(postsWithCounts)
-      } catch (error) {
-        console.error("Error fetching user posts:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (userId) {
-      fetchUserPosts()
-    }
-  }, [userId])
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
-      </div>
-    )
-  }
-
-  if (userPosts.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <FileText className="h-12 w-12 mx-auto text-slate-600 mb-4" />
-        <h3 className="text-xl font-semibold text-white mb-2">No hay posts aún</h3>
-        <p className="text-slate-400">Este usuario aún no ha publicado nada.</p>
-      </div>
-    )
-  }
+export function ProfilePostCard({ post, onLike }: ProfilePostCardProps) {
+  const timeAgo = formatDistanceToNow(new Date(post.created_at), {
+    addSuffix: true,
+    locale: es,
+  })
 
   return (
-    <div className="space-y-6">
-      {userPosts.map((post) => (
-        <PostCard key={post.id} post={post} onLike={toggleLike} />
-      ))}
-    </div>
+    <Card>
+      <CardContent className="p-6">
+        {/* Header del post */}
+        <div className="flex items-start space-x-3 mb-4">
+          <Avatar>
+            <AvatarImage src={post.user?.image || ""} />
+            <AvatarFallback>{post.user?.name?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold">{post.user?.name || "Usuario"}</h3>
+              <span className="text-sm text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">{timeAgo}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenido del post */}
+        <div className="mb-4">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.content}</p>
+        </div>
+
+        {/* Imagen si existe */}
+        {post.image_url && (
+          <div className="mb-4">
+            <img
+              src={post.image_url || "/placeholder.svg"}
+              alt="Post image"
+              className="rounded-lg max-w-full h-auto max-h-96 object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none"
+              }}
+            />
+          </div>
+        )}
+
+        {/* Tags */}
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {post.tags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Acciones */}
+        <div className="flex items-center space-x-6 pt-2 border-t">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onLike(post.id)}
+            className={`flex items-center space-x-2 ${post.user_has_liked ? "text-red-500" : "text-muted-foreground"}`}
+          >
+            <Heart className={`h-4 w-4 ${post.user_has_liked ? "fill-current" : ""}`} />
+            <span>{post.likes_count || 0}</span>
+          </Button>
+
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground">
+            <MessageCircle className="h-4 w-4" />
+            <span>{post.comments_count || 0}</span>
+          </Button>
+
+          <Button variant="ghost" size="sm" className="flex items-center space-x-2 text-muted-foreground">
+            <Share2 className="h-4 w-4" />
+            <span>Compartir</span>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
