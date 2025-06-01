@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Menu, Search, ShoppingCart, Gamepad2 } from "lucide-react"
-import { AuthNavReal } from "@/components/auth-nav-real"
+import { AuthNavEnhanced } from "@/components/auth-nav-enhanced"
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -72,9 +72,9 @@ export function Header() {
               <ShoppingCart className="h-5 w-5" />
             </Button>
 
-            {/* Auth Navigation */}
+            {/* Auth Navigation - Usando el componente mejorado */}
             <div className="hidden md:block">
-              <AuthNavReal />
+              <AuthNavEnhanced />
             </div>
 
             {/* Mobile Menu */}
@@ -124,20 +124,7 @@ export function Header() {
 
                   {/* Mobile Auth Links */}
                   <div className="border-t border-slate-700 pt-4 mt-4">
-                    <Link
-                      href="/login"
-                      className="text-slate-300 hover:text-cyan-400 text-lg block mb-2"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Iniciar Sesión
-                    </Link>
-                    <Link
-                      href="/register"
-                      className="text-slate-300 hover:text-cyan-400 text-lg block"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      Registrarse
-                    </Link>
+                    <AuthNavEnhanced />
                   </div>
                 </nav>
               </DialogContent>
