@@ -1,5 +1,6 @@
 import type React from "react"
 import { Providers } from "@/components/providers"
+import { AuthFeedback } from "@/components/auth-feedback"
 import { Inter } from "next/font/google"
 import "./globals.css"
 
@@ -13,12 +14,11 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AuthFeedback />
+          {children}
+        </Providers>
       </body>
     </html>
   )
 }
-
-export const metadata = {
-      generator: 'v0.dev'
-    };
