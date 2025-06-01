@@ -32,12 +32,6 @@ const handler = NextAuth({
     async signIn({ user, account, profile }) {
       try {
         console.log("🔄 INICIANDO proceso de guardado en Supabase...")
-        console.log("📋 Datos del usuario:", {
-          provider: account?.provider,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        })
 
         // Verificar si el usuario ya existe
         const { data: existingUser, error: fetchError } = await supabaseAdmin
@@ -54,11 +48,10 @@ const handler = NextAuth({
         if (existingUser) {
           console.log("👤 Usuario existente encontrado:", existingUser.email)
 
-          // Actualizar información del usuario existente
+          // Solo actualizar avatar y timestamp
           const { error: updateError } = await supabaseAdmin
             .from("users")
             .update({
-              name: user.name,
               avatar_url: user.image,
               updated_at: new Date().toISOString(),
             })
@@ -72,10 +65,52 @@ const handler = NextAuth({
         } else {
           console.log("🆕 Creando nuevo usuario...")
 
+          // Generar username único basado en el proveedor
+          let username = ""
+          let realName = ""
+          let displayName = ""
+
+          if (account?.provider === "google") {
+            // Para Google, usar el nombre como real_name
+            realName = user.name || ""
+            displayName = user.name || ""
+            // Generar username desde el email
+            username =
+              user.email
+                ?.split("@")[0]
+                ?.toLowerCase()
+                .replace(/[^a-z0-9]/g, "") || ""
+          } else if (account?.provider === "discord") {
+            // Para Discord, el nombre es el username
+            username = user.name?.toLowerCase().replace(/[^a-z0-9]/g, "") || ""
+            displayName = user.name || ""
+            // real_name se solicitará después
+            realName = ""
+          }
+
+          // Verificar que el username sea único
+          let finalUsername = username
+          let counter = 1
+          while (true) {
+            const { data: existingUsername } = await supabaseAdmin
+              .from("users")
+              .select("username")
+              .eq("username", finalUsername)
+              .single()
+
+            if (!existingUsername) break
+            finalUsername = `${username}${counter}`
+            counter++
+          }
+
           const userData = {
             email: user.email,
-            name: user.name,
+            name: user.name, // Mantener para compatibilidad
+            real_name: realName,
+            username: finalUsername,
+            display_name: displayName,
             avatar_url: user.image,
+            profile_completed: account?.provider === "google", // Google completo, Discord no
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
@@ -103,7 +138,6 @@ const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
-  // Configuración mejorada de cookies para producción
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -138,7 +172,7 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15, // 15 minutes
+        maxAge: 60 * 15,
       },
     },
     state: {
@@ -148,11 +182,10 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15, // 15 minutes
+        maxAge: 60 * 15,
       },
     },
   },
-  // Configuración adicional para debugging
   debug: process.env.NODE_ENV === "development",
 })
 
