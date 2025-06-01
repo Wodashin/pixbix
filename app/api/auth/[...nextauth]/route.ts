@@ -19,6 +19,7 @@ const handler = NextAuth({
       if (user) {
         token.id = user.id
         token.provider = account?.provider
+        token.isNewUser = account?.isNewUser || false
       }
       return token
     },
@@ -26,34 +27,15 @@ const handler = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.provider = token.provider as string
+        session.user.isNewUser = token.isNewUser as boolean
       }
       return session
     },
     async signIn({ user, account, profile }) {
       try {
-        console.log("🔄 INICIANDO proceso de guardado en Supabase...")
-        console.log("📋 Datos del usuario:", {
-          provider: account?.provider,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        })
-
-        // Verificar conexión a Supabase
-        console.log("🔗 Verificando conexión a Supabase...")
-        const { data: testConnection, error: connectionError } = await supabaseAdmin
-          .from("users")
-          .select("count")
-          .limit(1)
-
-        if (connectionError) {
-          console.error("❌ ERROR DE CONEXIÓN a Supabase:", connectionError)
-          return true // Permitir login aunque falle
-        }
-        console.log("✅ Conexión a Supabase exitosa")
+        console.log("🔄 INICIANDO proceso de autenticación...")
 
         // Verificar si el usuario ya existe
-        console.log("🔍 Buscando usuario existente...")
         const { data: existingUser, error: fetchError } = await supabaseAdmin
           .from("users")
           .select("*")
@@ -62,31 +44,32 @@ const handler = NextAuth({
 
         if (fetchError && fetchError.code !== "PGRST116") {
           console.error("❌ ERROR buscando usuario:", fetchError)
-          console.error("❌ Código de error:", fetchError.code)
-          console.error("❌ Mensaje:", fetchError.message)
           return true
         }
 
         if (existingUser) {
-          console.log("👤 Usuario ya existe:", existingUser.email)
+          console.log("👤 Usuario existente encontrado:", existingUser.email)
 
-          // Actualizar información
-          const { data: updatedUser, error: updateError } = await supabaseAdmin
+          // Actualizar información del usuario existente
+          const { error: updateError } = await supabaseAdmin
             .from("users")
             .update({
               name: user.name,
               avatar_url: user.image,
+              last_provider: account?.provider,
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingUser.id)
-            .select()
 
           if (updateError) {
             console.error("❌ ERROR actualizando usuario:", updateError)
-            console.error("❌ Detalles:", updateError.details)
-            console.error("❌ Hint:", updateError.hint)
           } else {
-            console.log("✅ Usuario actualizado exitosamente:", updatedUser)
+            console.log("✅ Usuario actualizado exitosamente")
+          }
+
+          // Marcar como usuario existente
+          if (account) {
+            account.isNewUser = false
           }
         } else {
           console.log("🆕 Creando nuevo usuario...")
@@ -95,29 +78,27 @@ const handler = NextAuth({
             email: user.email,
             name: user.name,
             avatar_url: user.image,
+            provider: account?.provider,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
 
-          console.log("📝 Datos a insertar:", userData)
-
-          const { data: newUser, error: insertError } = await supabaseAdmin.from("users").insert([userData]).select()
+          const { error: insertError } = await supabaseAdmin.from("users").insert([userData])
 
           if (insertError) {
-            console.error("❌ ERROR CRÍTICO creando usuario:", insertError)
-            console.error("❌ Código:", insertError.code)
-            console.error("❌ Mensaje:", insertError.message)
-            console.error("❌ Detalles:", insertError.details)
-            console.error("❌ Hint:", insertError.hint)
+            console.error("❌ ERROR creando usuario:", insertError)
           } else {
-            console.log("🎉 ¡USUARIO CREADO EXITOSAMENTE!", newUser)
+            console.log("🎉 ¡USUARIO CREADO EXITOSAMENTE!")
+            // Marcar como usuario nuevo
+            if (account) {
+              account.isNewUser = true
+            }
           }
         }
 
         return true
       } catch (error) {
         console.error("💥 ERROR GENERAL en signIn:", error)
-        console.error("💥 Stack trace:", error instanceof Error ? error.stack : "No stack trace")
         return true
       }
     },
@@ -128,6 +109,15 @@ const handler = NextAuth({
   },
   session: {
     strategy: "jwt",
+  },
+  events: {
+    async signIn({ user, account, isNewUser }) {
+      console.log(`🎯 Usuario ${isNewUser ? "nuevo" : "existente"} logueado:`, {
+        email: user.email,
+        provider: account?.provider,
+        isNewUser,
+      })
+    },
   },
 })
 
