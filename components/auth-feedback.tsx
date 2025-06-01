@@ -12,17 +12,25 @@ export function AuthFeedback() {
 
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
-      // Verificar si es un usuario nuevo basado en la fecha de creación
-      const isNew = session.user.isNewUser
-      setIsNewUser(isNew || false)
-      setShowWelcome(true)
+      // Verificar si ya mostramos la notificación en esta sesión del navegador
+      const welcomeShown = localStorage.getItem("welcome_shown")
 
-      // Ocultar el mensaje después de 5 segundos
-      const timer = setTimeout(() => {
-        setShowWelcome(false)
-      }, 5000)
+      if (!welcomeShown) {
+        // Verificar si es un usuario nuevo basado en la fecha de creación
+        const isNew = session.user.isNewUser
+        setIsNewUser(isNew || false)
+        setShowWelcome(true)
 
-      return () => clearTimeout(timer)
+        // Marcar como mostrado para esta sesión
+        localStorage.setItem("welcome_shown", "true")
+
+        // Ocultar el mensaje después de 5 segundos
+        const timer = setTimeout(() => {
+          setShowWelcome(false)
+        }, 5000)
+
+        return () => clearTimeout(timer)
+      }
     }
   }, [session, status])
 
