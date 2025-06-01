@@ -1,7 +1,9 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import DiscordProvider from "next-auth/providers/discord"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { supabaseAdmin } from "@/lib/supabase"
+import bcrypt from "bcryptjs"
 
 const handler = NextAuth({
   providers: [
@@ -13,12 +15,57 @@ const handler = NextAuth({
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
     }),
+    CredentialsProvider({
+      name: "credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null
+        }
+
+        try {
+          // Buscar usuario en Supabase
+          const { data: user, error } = await supabaseAdmin!
+            .from("users")
+            .select("*")
+            .eq("email", credentials.email)
+            .single()
+
+          if (error || !user || !user.password_hash) {
+            console.log("Usuario no encontrado o sin contraseña")
+            return null
+          }
+
+          // Verificar contraseña
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password_hash)
+
+          if (!isPasswordValid) {
+            console.log("Contraseña incorrecta")
+            return null
+          }
+
+          // Retornar datos del usuario
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.real_name || user.display_name || user.name,
+            image: user.avatar_url,
+          }
+        } catch (error) {
+          console.error("Error en autorización:", error)
+          return null
+        }
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
-        token.provider = account?.provider
+        token.provider = account?.provider || "credentials"
       }
       return token
     },
@@ -31,10 +78,15 @@ const handler = NextAuth({
     },
     async signIn({ user, account, profile }) {
       try {
+        // Solo procesar OAuth providers, las credenciales ya se manejan en authorize
+        if (account?.provider === "credentials") {
+          return true
+        }
+
         console.log("🔄 INICIANDO proceso de guardado en Supabase...")
 
         // Verificar si el usuario ya existe
-        const { data: existingUser, error: fetchError } = await supabaseAdmin
+        const { data: existingUser, error: fetchError } = await supabaseAdmin!
           .from("users")
           .select("*")
           .eq("email", user.email)
@@ -49,7 +101,7 @@ const handler = NextAuth({
           console.log("👤 Usuario existente encontrado:", existingUser.email)
 
           // Solo actualizar avatar y timestamp
-          const { error: updateError } = await supabaseAdmin
+          const { error: updateError } = await supabaseAdmin!
             .from("users")
             .update({
               avatar_url: user.image,
@@ -71,20 +123,16 @@ const handler = NextAuth({
           let displayName = ""
 
           if (account?.provider === "google") {
-            // Para Google, usar el nombre como real_name
             realName = user.name || ""
             displayName = user.name || ""
-            // Generar username desde el email
             username =
               user.email
                 ?.split("@")[0]
                 ?.toLowerCase()
                 .replace(/[^a-z0-9]/g, "") || ""
           } else if (account?.provider === "discord") {
-            // Para Discord, el nombre es el username
             username = user.name?.toLowerCase().replace(/[^a-z0-9]/g, "") || ""
             displayName = user.name || ""
-            // real_name se solicitará después
             realName = ""
           }
 
@@ -92,7 +140,7 @@ const handler = NextAuth({
           let finalUsername = username
           let counter = 1
           while (true) {
-            const { data: existingUsername } = await supabaseAdmin
+            const { data: existingUsername } = await supabaseAdmin!
               .from("users")
               .select("username")
               .eq("username", finalUsername)
@@ -105,17 +153,17 @@ const handler = NextAuth({
 
           const userData = {
             email: user.email,
-            name: user.name, // Mantener para compatibilidad
+            name: user.name,
             real_name: realName,
             username: finalUsername,
             display_name: displayName,
             avatar_url: user.image,
-            profile_completed: account?.provider === "google", // Google completo, Discord no
+            profile_completed: account?.provider === "google",
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
 
-          const { error: insertError } = await supabaseAdmin.from("users").insert([userData])
+          const { error: insertError } = await supabaseAdmin!.from("users").insert([userData])
 
           if (insertError) {
             console.error("❌ ERROR creando usuario:", insertError)
@@ -163,26 +211,6 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-      },
-    },
-    pkceCodeVerifier: {
-      name: `next-auth.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15,
-      },
-    },
-    state: {
-      name: `next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 60 * 15,
       },
     },
   },
