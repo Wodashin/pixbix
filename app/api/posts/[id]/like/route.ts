@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { createClient } from "@/utils/supabase/server"
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -22,14 +23,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     if (existingLike) {
       // Quitar like
-      await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", session.user.id)
+      const { error } = await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", session.user.id)
+      if (error) {
+        console.error("Error removing like:", error)
+        return NextResponse.json({ error: "Error removing like" }, { status: 500 })
+      }
       return NextResponse.json({ liked: false })
     } else {
       // Dar like
-      await supabase.from("likes").insert({
+      const { error } = await supabase.from("likes").insert({
         post_id: postId,
         user_id: session.user.id,
       })
+      if (error) {
+        console.error("Error adding like:", error)
+        return NextResponse.json({ error: "Error adding like" }, { status: 500 })
+      }
       return NextResponse.json({ liked: true })
     }
   } catch (error) {
