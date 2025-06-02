@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, Users, TrendingUp, Calendar, Search } from "lucide-react"
-import { CreatePost } from "@/components/create-post"
-import { PostsFeed } from "@/components/posts-feed"
+import { MessageSquare, Users, TrendingUp, Calendar, Search, Heart, MessageCircle, Share2, Eye } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { useSession } from "next-auth/react"
+import { usePosts } from "@/hooks/use-posts"
+import { Textarea } from "@/components/ui/textarea"
 
 const trendingTopics = [
   { name: "Elden Ring DLC", posts: 1234 },
@@ -28,6 +30,15 @@ const communityStats = [
 export function CommunityPage() {
   const [activeTab, setActiveTab] = useState("feed")
   const { data: session } = useSession()
+  const [newPost, setNewPost] = useState("")
+  const { posts, isLoading, error, createPost, likePost } = usePosts()
+
+  const handleCreatePost = async () => {
+    if (newPost.trim()) {
+      await createPost(newPost)
+      setNewPost("")
+    }
+  }
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -68,9 +79,138 @@ export function CommunityPage() {
               </TabsTrigger>
             </TabsList>
 
+            {/* Create Post */}
+            {session && (
+              <Card className="bg-slate-800 border-slate-700 mb-6 mt-6">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">Crear Post</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Textarea
+                    placeholder="¿Qué está pasando en tu mundo gaming?"
+                    value={newPost}
+                    onChange={(e) => setNewPost(e.target.value)}
+                    className="bg-slate-700 border-slate-600 text-slate-100 min-h-[100px]"
+                  />
+                  <div className="flex justify-between items-center">
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        📷 Imagen
+                      </Button>
+                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        🎮 Juego
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={handleCreatePost}
+                      className="bg-purple-600 hover:bg-purple-700"
+                      disabled={!newPost.trim()}
+                    >
+                      Publicar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <TabsContent value="feed" className="space-y-6">
-              <CreatePost />
-              <PostsFeed />
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400">Cargando posts...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-400">Error al cargar los posts</p>
+                </div>
+              ) : posts && posts.length > 0 ? (
+                posts.map((post) => (
+                  <Card key={post.id} className="bg-slate-800 border-slate-700">
+                    <CardContent className="p-6">
+                      {/* Post Header */}
+                      <div className="flex items-center space-x-3 mb-4">
+                        <Avatar>
+                          <AvatarImage
+                            src={post.user?.avatar_url || "/placeholder.svg?height=40&width=40&query=avatar"}
+                          />
+                          <AvatarFallback>{post.user?.username?.[0] || "U"}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-white">{post.user?.username || "Usuario"}</h3>
+                            {post.user?.badge && (
+                              <Badge variant="secondary" className="bg-purple-600 text-white">
+                                {post.user.badge}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-400">
+                            {new Date(post.created_at).toLocaleString("es-ES", {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Post Content */}
+                      <p className="text-slate-300 mb-4">{post.content}</p>
+
+                      {/* Post Image */}
+                      {post.image_url && (
+                        <div className="mb-4 rounded-lg overflow-hidden">
+                          <img
+                            src={post.image_url || "/placeholder.svg"}
+                            alt="Post content"
+                            className="w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {post.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="border-cyan-500 text-cyan-400">
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Post Actions */}
+                      <div className="flex items-center justify-between pt-4 border-t border-slate-700">
+                        <div className="flex items-center space-x-6">
+                          <button
+                            className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors"
+                            onClick={() => likePost(post.id)}
+                          >
+                            <Heart className={`h-5 w-5 ${post.liked ? "fill-red-400 text-red-400" : ""}`} />
+                            <span>{post.likes_count || 0}</span>
+                          </button>
+                          <button className="flex items-center space-x-2 text-slate-400 hover:text-cyan-400 transition-colors">
+                            <MessageCircle className="h-5 w-5" />
+                            <span>{post.comments_count || 0}</span>
+                          </button>
+                          <button className="flex items-center space-x-2 text-slate-400 hover:text-purple-400 transition-colors">
+                            <Share2 className="h-5 w-5" />
+                            <span>{post.shares_count || 0}</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-1 text-slate-400">
+                          <Eye className="h-4 w-4" />
+                          <span className="text-sm">{post.views_count || 0} vistas</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-slate-400">No hay posts aún. ¡Sé el primero en publicar!</p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="popular" className="space-y-6">
