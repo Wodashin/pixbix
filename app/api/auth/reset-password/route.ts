@@ -59,11 +59,14 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 10)
     console.log("✅ Contraseña hasheada correctamente")
 
-    // Actualizar la contraseña del usuario
+    // Actualizar la contraseña del usuario - CORREGIDO: usar password_hash
     console.log("💾 Actualizando contraseña del usuario:", tokenData.user_id)
     const { error: updateError } = await supabase
       .from("users")
-      .update({ password: hashedPassword })
+      .update({
+        password_hash: hashedPassword, // 👈 CORREGIDO: era 'password', ahora es 'password_hash'
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", tokenData.user_id)
 
     if (updateError) {
