@@ -51,7 +51,7 @@ const handler = NextAuth({
           return {
             id: user.id,
             email: user.email,
-            name: user.real_name || user.display_name || user.name,
+            name: user.display_name || user.username || user.real_name || user.name,
             image: user.avatar_url,
           }
         } catch (error) {
@@ -100,7 +100,7 @@ const handler = NextAuth({
         if (existingUser) {
           console.log("👤 Usuario existente encontrado:", existingUser.email)
 
-          // Solo actualizar avatar y timestamp
+          // IMPORTANTE: Solo actualizar avatar y timestamp, NO el username
           const { error: updateError } = await supabaseAdmin!
             .from("users")
             .update({
@@ -125,12 +125,14 @@ const handler = NextAuth({
           if (account?.provider === "google") {
             realName = user.name || ""
             displayName = user.name || ""
+            // Generar username a partir del email pero SIN usar el email completo
             username =
               user.email
                 ?.split("@")[0]
                 ?.toLowerCase()
                 .replace(/[^a-z0-9]/g, "") || ""
           } else if (account?.provider === "discord") {
+            // Para Discord, usar el nombre como username pero limpiarlo
             username = user.name?.toLowerCase().replace(/[^a-z0-9]/g, "") || ""
             displayName = user.name || ""
             realName = ""
@@ -156,7 +158,7 @@ const handler = NextAuth({
             name: user.name,
             real_name: realName,
             username: finalUsername,
-            display_name: displayName,
+            display_name: displayName || finalUsername, // Usar username como display_name si no hay otro
             avatar_url: user.image,
             profile_completed: account?.provider === "google",
             created_at: new Date().toISOString(),
