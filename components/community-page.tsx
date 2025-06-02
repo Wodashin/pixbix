@@ -1,16 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, Users, TrendingUp, Calendar, Search, Heart, MessageCircle, Share2, Eye } from "lucide-react"
+import {
+  MessageSquare,
+  Users,
+  TrendingUp,
+  Calendar,
+  Search,
+  Heart,
+  MessageCircle,
+  Share2,
+  Eye,
+  Plus,
+} from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { useSession } from "next-auth/react"
-import { usePosts } from "@/hooks/use-posts"
 import { Textarea } from "@/components/ui/textarea"
+import { useSession } from "next-auth/react"
 
 const trendingTopics = [
   { name: "Elden Ring DLC", posts: 1234 },
@@ -31,12 +41,68 @@ export function CommunityPage() {
   const [activeTab, setActiveTab] = useState("feed")
   const { data: session } = useSession()
   const [newPost, setNewPost] = useState("")
-  const { posts, isLoading, error, createPost, likePost } = usePosts()
+  const [posts, setPosts] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch posts from API
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await fetch("/api/posts")
+        if (response.ok) {
+          const data = await response.json()
+          setPosts(data)
+        }
+      } catch (error) {
+        console.error("Error fetching posts:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [])
 
   const handleCreatePost = async () => {
-    if (newPost.trim()) {
-      await createPost(newPost)
-      setNewPost("")
+    if (!newPost.trim() || !session) return
+
+    try {
+      const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: newPost,
+        }),
+      })
+
+      if (response.ok) {
+        const newPostData = await response.json()
+        setPosts([newPostData, ...posts])
+        setNewPost("")
+      }
+    } catch (error) {
+      console.error("Error creating post:", error)
+    }
+  }
+
+  const handleLikePost = async (postId: string) => {
+    try {
+      const response = await fetch(`/api/posts/${postId}/like`, {
+        method: "POST",
+      })
+
+      if (response.ok) {
+        // Update the post in the local state
+        setPosts(
+          posts.map((post) =>
+            post.id === postId ? { ...post, likes_count: (post.likes_count || 0) + 1, liked: true } : post,
+          ),
+        )
+      }
+    } catch (error) {
+      console.error("Error liking post:", error)
     }
   }
 
@@ -83,7 +149,10 @@ export function CommunityPage() {
             {session && (
               <Card className="bg-slate-800 border-slate-700 mb-6 mt-6">
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center">Crear Post</CardTitle>
+                  <CardTitle className="text-white flex items-center">
+                    <Plus className="mr-2 h-5 w-5" />
+                    Crear Post
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Textarea
@@ -99,6 +168,9 @@ export function CommunityPage() {
                       </Button>
                       <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
                         🎮 Juego
+                      </Button>
+                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                        🏆 Logro
                       </Button>
                     </div>
                     <Button
@@ -117,10 +189,6 @@ export function CommunityPage() {
               {isLoading ? (
                 <div className="text-center py-12">
                   <p className="text-slate-400">Cargando posts...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-12">
-                  <p className="text-red-400">Error al cargar los posts</p>
                 </div>
               ) : posts && posts.length > 0 ? (
                 posts.map((post) => (
@@ -171,7 +239,7 @@ export function CommunityPage() {
                       {/* Tags */}
                       {post.tags && post.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {post.tags.map((tag, index) => (
+                          {post.tags.map((tag: string, index: number) => (
                             <Badge key={index} variant="outline" className="border-cyan-500 text-cyan-400">
                               #{tag}
                             </Badge>
@@ -184,7 +252,7 @@ export function CommunityPage() {
                         <div className="flex items-center space-x-6">
                           <button
                             className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors"
-                            onClick={() => likePost(post.id)}
+                            onClick={() => handleLikePost(post.id)}
                           >
                             <Heart className={`h-5 w-5 ${post.liked ? "fill-red-400 text-red-400" : ""}`} />
                             <span>{post.likes_count || 0}</span>
@@ -208,7 +276,9 @@ export function CommunityPage() {
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-slate-400">No hay posts aún. ¡Sé el primero en publicar!</p>
+                  <h3 className="text-xl font-semibold text-white mb-2">¡Bienvenido a la comunidad!</h3>
+                  <p className="text-slate-400 mb-4">No hay posts aún. ¡Sé el primero en compartir algo!</p>
+                  {!session && <p className="text-slate-500">Inicia sesión para crear tu primer post</p>}
                 </div>
               )}
             </TabsContent>
