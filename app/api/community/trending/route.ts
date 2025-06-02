@@ -36,11 +36,18 @@ export async function GET() {
       { name: "Indie Games", posts: 432 },
     ]
 
-    const finalTopics = trendingTopics.length > 0 ? trendingTopics : defaultTopics
+    const finalTopics = trendingTopics.length >= 3 ? trendingTopics : defaultTopics
 
     return NextResponse.json(finalTopics)
   } catch (error) {
     console.error("Error fetching trending topics:", error)
-    return NextResponse.json([])
+    // Devolver topics por defecto en caso de error
+    return NextResponse.json([
+      { name: "Elden Ring DLC", posts: 1234 },
+      { name: "Valorant Champions", posts: 987 },
+      { name: "Nintendo Direct", posts: 756 },
+      { name: "Gaming Setup", posts: 543 },
+      { name: "Indie Games", posts: 432 },
+    ])
   }
 }
