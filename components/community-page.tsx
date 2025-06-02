@@ -16,35 +16,80 @@ import {
   Share2,
   Eye,
   Plus,
+  ImageIcon,
+  Gamepad2,
+  Trophy,
+  X,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useSession } from "next-auth/react"
 
-const trendingTopics = [
-  { name: "Elden Ring DLC", posts: 1234 },
-  { name: "Valorant Champions", posts: 987 },
-  { name: "Nintendo Direct", posts: 756 },
-  { name: "Gaming Setup", posts: 543 },
-  { name: "Indie Games", posts: 432 },
-]
+interface CommunityStats {
+  activeUsers: number
+  postsToday: number
+  totalPosts: number
+  upcomingEvents: number
+}
 
-const communityStats = [
-  { label: "Miembros Activos", value: "15.2K", icon: Users },
-  { label: "Posts Hoy", value: "342", icon: MessageSquare },
-  { label: "Trending", value: "25", icon: TrendingUp },
-  { label: "Eventos", value: "8", icon: Calendar },
-]
+interface TrendingTopic {
+  name: string
+  posts: number
+}
 
 export function CommunityPage() {
   const [activeTab, setActiveTab] = useState("feed")
   const { data: session } = useSession()
   const [newPost, setNewPost] = useState("")
+  const [selectedGame, setSelectedGame] = useState("")
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [posts, setPosts] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isPosting, setIsPosting] = useState(false)
+  const [stats, setStats] = useState<CommunityStats>({
+    activeUsers: 0,
+    postsToday: 0,
+    totalPosts: 0,
+    upcomingEvents: 0,
+  })
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
 
-  // Fetch posts from API
+  // Fetch community stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch("/api/community/stats")
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data)
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  // Fetch trending topics
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const response = await fetch("/api/community/trending")
+        if (response.ok) {
+          const data = await response.json()
+          setTrendingTopics(data)
+        }
+      } catch (error) {
+        console.error("Error fetching trending:", error)
+      }
+    }
+
+    fetchTrending()
+  }, [])
+
+  // Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
       try {
@@ -64,9 +109,13 @@ export function CommunityPage() {
   }, [])
 
   const handleCreatePost = async () => {
-    if (!newPost.trim() || !session) return
+    if (!newPost.trim() || !session || isPosting) return
 
+    setIsPosting(true)
     try {
+      const tags = [...selectedTags]
+      if (selectedGame) tags.push(selectedGame)
+
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: {
@@ -74,6 +123,7 @@ export function CommunityPage() {
         },
         body: JSON.stringify({
           content: newPost,
+          tags: tags.length > 0 ? tags : undefined,
         }),
       })
 
@@ -81,9 +131,13 @@ export function CommunityPage() {
         const newPostData = await response.json()
         setPosts([newPostData, ...posts])
         setNewPost("")
+        setSelectedGame("")
+        setSelectedTags([])
       }
     } catch (error) {
       console.error("Error creating post:", error)
+    } finally {
+      setIsPosting(false)
     }
   }
 
@@ -94,10 +148,16 @@ export function CommunityPage() {
       })
 
       if (response.ok) {
-        // Update the post in the local state
+        const { liked } = await response.json()
         setPosts(
           posts.map((post) =>
-            post.id === postId ? { ...post, likes_count: (post.likes_count || 0) + 1, liked: true } : post,
+            post.id === postId
+              ? {
+                  ...post,
+                  likes_count: liked ? (post.likes_count || 0) + 1 : Math.max((post.likes_count || 0) - 1, 0),
+                  liked,
+                }
+              : post,
           ),
         )
       }
@@ -105,6 +165,23 @@ export function CommunityPage() {
       console.error("Error liking post:", error)
     }
   }
+
+  const addTag = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags([...selectedTags, tag])
+    }
+  }
+
+  const removeTag = (tag: string) => {
+    setSelectedTags(selectedTags.filter((t) => t !== tag))
+  }
+
+  const communityStatsDisplay = [
+    { label: "Miembros Activos", value: stats.activeUsers.toLocaleString(), icon: Users },
+    { label: "Posts Hoy", value: stats.postsToday.toString(), icon: MessageSquare },
+    { label: "Trending", value: trendingTopics.length.toString(), icon: TrendingUp },
+    { label: "Eventos", value: stats.upcomingEvents.toString(), icon: Calendar },
+  ]
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -118,7 +195,7 @@ export function CommunityPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {communityStats.map((stat, index) => (
+        {communityStatsDisplay.map((stat, index) => (
           <Card key={index} className="bg-slate-800 border-slate-700">
             <CardContent className="p-4 text-center">
               <stat.icon className="h-6 w-6 mx-auto mb-2 text-cyan-400" />
@@ -161,24 +238,78 @@ export function CommunityPage() {
                     onChange={(e) => setNewPost(e.target.value)}
                     className="bg-slate-700 border-slate-600 text-slate-100 min-h-[100px]"
                   />
+
+                  {/* Game Selection */}
+                  {selectedGame && (
+                    <div className="flex items-center space-x-2">
+                      <Badge className="bg-cyan-600 text-white">
+                        🎮 {selectedGame}
+                        <button onClick={() => setSelectedGame("")} className="ml-2">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {selectedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTags.map((tag) => (
+                        <Badge key={tag} className="bg-purple-600 text-white">
+                          #{tag}
+                          <button onClick={() => removeTag(tag)} className="ml-2">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
-                        📷 Imagen
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-600 text-slate-300"
+                        onClick={() => {
+                          // Funcionalidad de imagen pendiente
+                          alert("Funcionalidad de imagen próximamente")
+                        }}
+                      >
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        Imagen
                       </Button>
-                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
-                        🎮 Juego
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-600 text-slate-300"
+                        onClick={() => {
+                          const game = prompt("¿Qué juego estás jugando?")
+                          if (game) setSelectedGame(game)
+                        }}
+                      >
+                        <Gamepad2 className="mr-2 h-4 w-4" />
+                        Juego
                       </Button>
-                      <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
-                        🏆 Logro
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-600 text-slate-300"
+                        onClick={() => {
+                          const achievement = prompt("¿Qué logro conseguiste?")
+                          if (achievement) addTag(`logro-${achievement}`)
+                        }}
+                      >
+                        <Trophy className="mr-2 h-4 w-4" />
+                        Logro
                       </Button>
                     </div>
                     <Button
                       onClick={handleCreatePost}
                       className="bg-purple-600 hover:bg-purple-700"
-                      disabled={!newPost.trim()}
+                      disabled={!newPost.trim() || isPosting}
                     >
-                      Publicar
+                      {isPosting ? "Publicando..." : "Publicar"}
                     </Button>
                   </div>
                 </CardContent>
@@ -200,16 +331,16 @@ export function CommunityPage() {
                           <AvatarImage
                             src={post.user?.avatar_url || "/placeholder.svg?height=40&width=40&query=avatar"}
                           />
-                          <AvatarFallback>{post.user?.username?.[0] || "U"}</AvatarFallback>
+                          <AvatarFallback>{post.user?.username?.[0]?.toUpperCase() || "U"}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-white">{post.user?.username || "Usuario"}</h3>
-                            {post.user?.badge && (
-                              <Badge variant="secondary" className="bg-purple-600 text-white">
-                                {post.user.badge}
-                              </Badge>
-                            )}
+                            <h3 className="font-semibold text-white">
+                              {post.user?.display_name || post.user?.username || "Usuario"}
+                            </h3>
+                            <Badge variant="secondary" className="bg-purple-600 text-white">
+                              Gamer
+                            </Badge>
                           </div>
                           <p className="text-sm text-slate-400">
                             {new Date(post.created_at).toLocaleString("es-ES", {
@@ -329,8 +460,13 @@ export function CommunityPage() {
                     <p className="font-medium text-white">#{topic.name}</p>
                     <p className="text-sm text-slate-400">{topic.posts} posts</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300">
-                    Ver
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-purple-400 hover:text-purple-300"
+                    onClick={() => addTag(topic.name)}
+                  >
+                    Usar
                   </Button>
                 </div>
               ))}
