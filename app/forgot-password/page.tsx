@@ -9,6 +9,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -52,62 +54,66 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">¿Olvidaste tu contraseña?</CardTitle>
-          <CardDescription className="text-center">
-            Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Correo electrónico
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
-                required
-                className="mt-1"
-              />
-            </div>
+    <div className="min-h-screen bg-slate-950">
+      <Header />
+      <div className="flex min-h-[calc(100vh-16rem)] items-center justify-center px-4 py-12">
+        <Card className="w-full max-w-md bg-slate-800 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center text-white">¿Olvidaste tu contraseña?</CardTitle>
+            <CardDescription className="text-center text-slate-400">
+              Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-slate-300">
+                  Correo electrónico
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  required
+                  className="mt-1 bg-slate-700 border-slate-600 text-slate-100"
+                />
+              </div>
 
-            {message && (
-              <Alert
-                className={
-                  message.type === "success"
-                    ? "bg-green-50 text-green-800 border-green-200"
-                    : "bg-red-50 text-red-800 border-red-200"
-                }
-              >
-                <AlertDescription>{message.text}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                "Enviar enlace de restablecimiento"
+              {message && (
+                <Alert
+                  className={
+                    message.type === "success"
+                      ? "bg-green-900/20 text-green-400 border-green-800"
+                      : "bg-red-900/20 text-red-400 border-red-800"
+                  }
+                >
+                  <AlertDescription>{message.text}</AlertDescription>
+                </Alert>
               )}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <Link href="/login" className="flex items-center text-sm text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Volver al inicio de sesión
-          </Link>
-        </CardFooter>
-      </Card>
+
+              <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  "Enviar enlace de restablecimiento"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="flex justify-center">
+            <Link href="/login" className="flex items-center text-sm text-slate-400 hover:text-slate-300">
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              Volver al inicio de sesión
+            </Link>
+          </CardFooter>
+        </Card>
+      </div>
+      <Footer />
     </div>
   )
 }
