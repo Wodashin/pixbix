@@ -13,9 +13,9 @@ import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, TrendingUp, Sta
 import { useSession } from "next-auth/react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { PageLayout } from "@/components/page-layout"
-import { PageHeader } from "@/components/page-header"
-import { StatsCards } from "@/components/stats-cards"
+import { PageLayout } from "./page-layout"
+import { PageHeader } from "./page-header"
+import { StatsCards } from "./stats-cards"
 
 interface Event {
   id: string
@@ -70,7 +70,7 @@ export function EventsPage() {
   const fetchEvents = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(`/api/events?type=${filter}&limit=50`)
+      const response = await fetch(/api/events?type=${filter}&limit=50)
       if (response.ok) {
         const data = await response.json()
         setEvents(data)
@@ -138,7 +138,7 @@ export function EventsPage() {
       } else {
         const errorData = await response.json()
         console.error("Error response:", errorData)
-        alert(`Error al crear evento: ${errorData.error || "Error desconocido"}`)
+        alert(Error al crear evento: ${errorData.error || "Error desconocido"})
       }
     } catch (error) {
       console.error("Error creating event:", error)
@@ -166,7 +166,7 @@ export function EventsPage() {
         headers["X-User-ID"] = session.user.id
       }
 
-      const response = await fetch(`/api/events/${eventId}/join`, {
+      const response = await fetch(/api/events/${eventId}/join, {
         method: "POST",
         headers,
       })
@@ -176,7 +176,7 @@ export function EventsPage() {
         alert("¡Te has unido al evento!")
       } else {
         const errorData = await response.json()
-        alert(`Error: ${errorData.error || "No se pudo unir al evento"}`)
+        alert(Error: ${errorData.error || "No se pudo unir al evento"})
       }
     } catch (error) {
       console.error("Error joining event:", error)
@@ -199,7 +199,7 @@ export function EventsPage() {
         headers["X-User-ID"] = session.user.id
       }
 
-      const response = await fetch(`/api/events/${eventId}/join`, {
+      const response = await fetch(/api/events/${eventId}/join, {
         method: "DELETE",
         headers,
       })
@@ -209,7 +209,7 @@ export function EventsPage() {
         alert("Has salido del evento")
       } else {
         const errorData = await response.json()
-        alert(`Error: ${errorData.error || "No se pudo salir del evento"}`)
+        alert(Error: ${errorData.error || "No se pudo salir del evento"})
       }
     } catch (error) {
       console.error("Error leaving event:", error)
@@ -463,7 +463,7 @@ export function EventsPage() {
                         <div className="flex-1">
                           <CardTitle className="text-white text-xl mb-3 line-clamp-1">{event.title}</CardTitle>
                           <div className="flex items-center space-x-2 mb-3">
-                            <Badge className={`${getEventTypeColor(event.event_type)} text-white px-3 py-1`}>
+                            <Badge className={${getEventTypeColor(event.event_type)} text-white px-3 py-1}>
                               {getEventTypeIcon(event.event_type)}
                               <span className="ml-1 capitalize">{event.event_type}</span>
                             </Badge>
@@ -521,4 +521,4 @@ export function EventsPage() {
                                 size="sm"
                                 onClick={() => joinEvent(event.id)}
                                 disabled={isEventFull(event)}
-                                className="bg-gra
+                                className="bg-gradient-to-r from-cyan-600 to-blue-
