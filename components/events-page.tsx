@@ -70,7 +70,7 @@ export function EventsPage() {
   const fetchEvents = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch(/api/events?type=${filter}&limit=50)
+      const response = await fetch(`/api/events?type=${filter}&limit=50`)
       if (response.ok) {
         const data = await response.json()
         setEvents(data)
@@ -138,7 +138,7 @@ export function EventsPage() {
       } else {
         const errorData = await response.json()
         console.error("Error response:", errorData)
-        alert(Error al crear evento: ${errorData.error || "Error desconocido"})
+        alert(`Error al crear evento: ${errorData.error || "Error desconocido"}`)
       }
     } catch (error) {
       console.error("Error creating event:", error)
@@ -166,7 +166,7 @@ export function EventsPage() {
         headers["X-User-ID"] = session.user.id
       }
 
-      const response = await fetch(/api/events/${eventId}/join, {
+      const response = await fetch(`/api/events/${eventId}/join`, {
         method: "POST",
         headers,
       })
@@ -176,7 +176,7 @@ export function EventsPage() {
         alert("¡Te has unido al evento!")
       } else {
         const errorData = await response.json()
-        alert(Error: ${errorData.error || "No se pudo unir al evento"})
+        alert(`Error: ${errorData.error || "No se pudo unir al evento"}`)
       }
     } catch (error) {
       console.error("Error joining event:", error)
@@ -199,7 +199,7 @@ export function EventsPage() {
         headers["X-User-ID"] = session.user.id
       }
 
-      const response = await fetch(/api/events/${eventId}/join, {
+      const response = await fetch(`/api/events/${eventId}/join`, {
         method: "DELETE",
         headers,
       })
@@ -209,7 +209,7 @@ export function EventsPage() {
         alert("Has salido del evento")
       } else {
         const errorData = await response.json()
-        alert(Error: ${errorData.error || "No se pudo salir del evento"})
+        alert(`Error: ${errorData.error || "No se pudo salir del evento"}`)
       }
     } catch (error) {
       console.error("Error leaving event:", error)
@@ -463,7 +463,7 @@ export function EventsPage() {
                         <div className="flex-1">
                           <CardTitle className="text-white text-xl mb-3 line-clamp-1">{event.title}</CardTitle>
                           <div className="flex items-center space-x-2 mb-3">
-                            <Badge className={${getEventTypeColor(event.event_type)} text-white px-3 py-1}>
+                            <Badge className={`${getEventTypeColor(event.event_type)} text-white px-3 py-1`}>
                               {getEventTypeIcon(event.event_type)}
                               <span className="ml-1 capitalize">{event.event_type}</span>
                             </Badge>
@@ -521,4 +521,94 @@ export function EventsPage() {
                                 size="sm"
                                 onClick={() => joinEvent(event.id)}
                                 disabled={isEventFull(event)}
-                                className="bg-gradient-to-r from-cyan-600 to-blue-
+                                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50"
+                              >
+                                {isEventFull(event) ? "Lleno" : "Unirse"}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Calendar className="h-20 w-20 text-slate-600 mx-auto mb-6" />
+                <h3 className="text-2xl font-semibold text-slate-400 mb-3">No hay eventos</h3>
+                <p className="text-slate-500 mb-6">
+                  {filter === "upcoming" ? "No hay eventos próximos" : "No se encontraron eventos"}
+                </p>
+                {session && (
+                  <Button
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    onClick={() => setIsCreateModalOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear el primer evento
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Trending */}
+            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <TrendingUp className="mr-2 h-5 w-5 text-cyan-400" />🔥 Trending
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Trophy className="h-5 w-5 text-yellow-400" />
+                    <span className="text-white font-medium">#Valorant Champions</span>
+                  </div>
+                  <Badge className="bg-yellow-500 text-white">Hot</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Gamepad2 className="h-5 w-5 text-green-400" />
+                    <span className="text-white font-medium">#League Worlds</span>
+                  </div>
+                  <Badge className="bg-green-500 text-white">Live</Badge>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <Users className="h-5 w-5 text-blue-400" />
+                    <span className="text-white font-medium">#CS2 Training</span>
+                  </div>
+                  <Badge className="bg-blue-500 text-white">New</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Acciones Rápidas */}
+            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
+                  <Users className="mr-2 h-4 w-4" />
+                  Encontrar Compañeros
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Mis Eventos
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </PageLayout>
+  )
+}
