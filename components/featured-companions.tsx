@@ -153,12 +153,7 @@ export function FeaturedCompanions() {
                   <Button className="w-full bg-cyan-600 hover:bg-cyan-700" disabled={!companion.online}>
                     {companion.online ? "Contratar Ahora" : "No Disponible"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
-                  >
-                    Ver Perfil
-                  </Button>
+                  <Button className="w-full bg-slate-600 hover:bg-slate-700 text-white border-0">Ver Perfil</Button>
                 </div>
               </CardContent>
             </Card>
@@ -166,11 +161,7 @@ export function FeaturedCompanions() {
         </div>
 
         <div className="text-center mt-10">
-          <Button
-            variant="outline"
-            size="lg"
-            className="border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
-          >
+          <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white">
             Ver Todos los Compañeros
           </Button>
         </div>
