@@ -71,16 +71,26 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getSession()
     console.log("Supabase session:", supabaseSession?.user?.email || "undefined")
 
-    // Método 3: Intentar con headers de autorización
+    // Método 3: Intentar con headers personalizados
+    const userEmailHeader = request.headers.get("X-User-Email")
+    const userIdHeader = request.headers.get("X-User-ID")
+    console.log("Custom headers - Email:", userEmailHeader || "undefined", "ID:", userIdHeader || "undefined")
+
+    // Método 4: Intentar con headers de autorización
     const authHeader = request.headers.get("authorization")
     console.log("Auth header present:", !!authHeader)
 
     let userEmail: string | null = null
     let userId: string | null = null
 
-    // Priorizar NextAuth, luego Supabase
-    if (session?.user?.email) {
+    // Priorizar headers personalizados, luego NextAuth, luego Supabase
+    if (userEmailHeader) {
+      userEmail = userEmailHeader
+      userId = userIdHeader
+      console.log("Using custom headers - Email:", userEmail, "ID:", userId)
+    } else if (session?.user?.email) {
       userEmail = session.user.email
+      userId = session.user.id
       console.log("Using NextAuth email:", userEmail)
     } else if (supabaseSession?.user?.email) {
       userEmail = supabaseSession.user.email
@@ -102,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (!userEmail) {
       console.log("No session found")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized - No session found" }, { status: 401 })
     }
 
     const { title, description, game, start_date, end_date, max_participants, event_type } = await request.json()
