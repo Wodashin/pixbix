@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, Search, TrendingUp } from "lucide-react"
+import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, TrendingUp, Star } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -182,48 +182,48 @@ export function EventsPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Header - Estilo consistente con otras páginas */}
         <div className="mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Eventos Gaming</h1>
           <p className="text-xl text-slate-400 max-w-2xl">
-            Únete a torneos, entrenamientos y meetups con la comunidad gaming
+            Conecta con gamers de todo el mundo, únete a torneos y descubre nuevas experiencias
           </p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Estilo similar a comunidad */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
             <CardContent className="p-4 text-center">
-              <Calendar className="h-6 w-6 mx-auto mb-2 text-cyan-400" />
+              <Calendar className="h-8 w-8 mx-auto mb-2 text-cyan-400" />
               <div className="text-2xl font-bold text-white">{events.length}</div>
               <div className="text-sm text-slate-400">Eventos Activos</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
             <CardContent className="p-4 text-center">
-              <Users className="h-6 w-6 mx-auto mb-2 text-green-400" />
+              <Users className="h-8 w-8 mx-auto mb-2 text-green-400" />
               <div className="text-2xl font-bold text-white">
                 {events.reduce((acc, event) => acc + event.participants.length, 0)}
               </div>
               <div className="text-sm text-slate-400">Participantes</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
             <CardContent className="p-4 text-center">
-              <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-400" />
+              <Trophy className="h-8 w-8 mx-auto mb-2 text-yellow-400" />
               <div className="text-2xl font-bold text-white">
                 {events.filter((e) => e.event_type === "tournament").length}
               </div>
               <div className="text-sm text-slate-400">Torneos</div>
             </CardContent>
           </Card>
-          <Card className="bg-slate-800 border-slate-700">
+          <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
             <CardContent className="p-4 text-center">
-              <Gamepad2 className="h-6 w-6 mx-auto mb-2 text-purple-400" />
+              <Star className="h-8 w-8 mx-auto mb-2 text-purple-400" />
               <div className="text-2xl font-bold text-white">
                 {events.filter((e) => e.event_type === "casual").length}
               </div>
-              <div className="text-sm text-slate-400">Casual</div>
+              <div className="text-sm text-slate-400">Eventos</div>
             </CardContent>
           </Card>
         </div>
@@ -231,15 +231,16 @@ export function EventsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* Filtros y botón crear - Estilo consistente */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-              <div className="flex space-x-4 mb-4 md:mb-0">
+              <div className="flex space-x-2 mb-4 md:mb-0">
                 <Button
                   variant={filter === "upcoming" ? "default" : "secondary"}
                   onClick={() => setFilter("upcoming")}
                   className={
                     filter === "upcoming"
-                      ? "bg-cyan-600 hover:bg-cyan-700"
-                      : "bg-slate-600 hover:bg-slate-700 text-white"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
                   }
                 >
                   Próximos
@@ -248,7 +249,9 @@ export function EventsPage() {
                   variant={filter === "all" ? "default" : "secondary"}
                   onClick={() => setFilter("all")}
                   className={
-                    filter === "all" ? "bg-cyan-600 hover:bg-cyan-700" : "bg-slate-600 hover:bg-slate-700 text-white"
+                    filter === "all"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
                   }
                 >
                   Todos
@@ -257,7 +260,9 @@ export function EventsPage() {
                   variant={filter === "past" ? "default" : "secondary"}
                   onClick={() => setFilter("past")}
                   className={
-                    filter === "past" ? "bg-cyan-600 hover:bg-cyan-700" : "bg-slate-600 hover:bg-slate-700 text-white"
+                    filter === "past"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
                   }
                 >
                   Pasados
@@ -272,7 +277,7 @@ export function EventsPage() {
                       Crear Evento
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-slate-800 border-slate-700 text-white">
+                  <DialogContent className="bg-slate-900 border-slate-700 text-white">
                     <DialogHeader>
                       <DialogTitle>Crear Nuevo Evento</DialogTitle>
                     </DialogHeader>
@@ -281,19 +286,19 @@ export function EventsPage() {
                         placeholder="Título del evento"
                         value={formData.title}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="bg-slate-700 border-slate-600"
+                        className="bg-slate-800 border-slate-600"
                       />
                       <Textarea
                         placeholder="Descripción del evento"
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="bg-slate-700 border-slate-600"
+                        className="bg-slate-800 border-slate-600"
                       />
                       <Input
                         placeholder="Juego (ej: Valorant, League of Legends)"
                         value={formData.game}
                         onChange={(e) => setFormData({ ...formData, game: e.target.value })}
-                        className="bg-slate-700 border-slate-600"
+                        className="bg-slate-800 border-slate-600"
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -302,7 +307,7 @@ export function EventsPage() {
                             type="datetime-local"
                             value={formData.start_date}
                             onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                            className="bg-slate-700 border-slate-600"
+                            className="bg-slate-800 border-slate-600"
                           />
                         </div>
                         <div>
@@ -311,7 +316,7 @@ export function EventsPage() {
                             type="datetime-local"
                             value={formData.end_date}
                             onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                            className="bg-slate-700 border-slate-600"
+                            className="bg-slate-800 border-slate-600"
                           />
                         </div>
                       </div>
@@ -322,10 +327,10 @@ export function EventsPage() {
                             value={formData.event_type}
                             onValueChange={(value: any) => setFormData({ ...formData, event_type: value })}
                           >
-                            <SelectTrigger className="bg-slate-700 border-slate-600">
+                            <SelectTrigger className="bg-slate-800 border-slate-600">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-slate-700 border-slate-600">
+                            <SelectContent className="bg-slate-800 border-slate-600">
                               <SelectItem value="tournament">Torneo</SelectItem>
                               <SelectItem value="casual">Casual</SelectItem>
                               <SelectItem value="training">Entrenamiento</SelectItem>
@@ -340,7 +345,7 @@ export function EventsPage() {
                             placeholder="Sin límite"
                             value={formData.max_participants}
                             onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
-                            className="bg-slate-700 border-slate-600"
+                            className="bg-slate-800 border-slate-600"
                           />
                         </div>
                       </div>
@@ -353,6 +358,7 @@ export function EventsPage() {
               )}
             </div>
 
+            {/* Lista de eventos */}
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="text-slate-400">Cargando eventos...</div>
@@ -360,7 +366,10 @@ export function EventsPage() {
             ) : events.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {events.map((event) => (
-                  <Card key={event.id} className="bg-slate-800 border-slate-700 hover:bg-slate-750 transition-colors">
+                  <Card
+                    key={event.id}
+                    className="bg-slate-800/50 border-slate-700 backdrop-blur-sm hover:bg-slate-800/70 transition-all duration-200"
+                  >
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -453,71 +462,43 @@ export function EventsPage() {
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Estilo consistente con otras páginas */}
           <div className="space-y-6">
-            {/* Search */}
-            <Card className="bg-slate-800 border-slate-700">
-              <CardContent className="p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                  <Input
-                    placeholder="Buscar eventos..."
-                    className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Event Types */}
-            <Card className="bg-slate-800 border-slate-700">
+            {/* Trending - Estilo similar a comunidad */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-white flex items-center">
                   <TrendingUp className="mr-2 h-5 w-5 text-cyan-400" />
-                  Tipos de Eventos
+                  Trending
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Trophy className="h-4 w-4 text-yellow-400" />
-                    <span className="text-white">Torneos</span>
+                    <span className="text-white">#Valorant Champions</span>
                   </div>
-                  <Badge className="bg-yellow-500 text-white">
-                    {events.filter((e) => e.event_type === "tournament").length}
-                  </Badge>
+                  <Badge className="bg-yellow-500 text-white">Hot</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Gamepad2 className="h-4 w-4 text-green-400" />
-                    <span className="text-white">Casual</span>
+                    <span className="text-white">#League Worlds</span>
                   </div>
-                  <Badge className="bg-green-500 text-white">
-                    {events.filter((e) => e.event_type === "casual").length}
-                  </Badge>
+                  <Badge className="bg-green-500 text-white">Live</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-blue-400" />
-                    <span className="text-white">Entrenamiento</span>
+                    <span className="text-white">#CS2 Training</span>
                   </div>
-                  <Badge className="bg-blue-500 text-white">
-                    {events.filter((e) => e.event_type === "training").length}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <MapPin className="h-4 w-4 text-purple-400" />
-                    <span className="text-white">Meetups</span>
-                  </div>
-                  <Badge className="bg-purple-500 text-white">
-                    {events.filter((e) => e.event_type === "meetup").length}
-                  </Badge>
+                  <Badge className="bg-blue-500 text-white">New</Badge>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <Card className="bg-slate-800 border-slate-700">
+            {/* Acciones Rápidas */}
+            <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-white">Acciones Rápidas</CardTitle>
               </CardHeader>
