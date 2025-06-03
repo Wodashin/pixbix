@@ -106,11 +106,7 @@ export function FeaturedGames() {
         </div>
 
         <div className="text-center mt-10">
-          <Button
-            variant="outline"
-            size="lg"
-            className="border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
-          >
+          <Button size="lg" className="bg-purple-600 hover:bg-purple-700 text-white">
             Ver Todos los Juegos
           </Button>
         </div>
