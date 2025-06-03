@@ -48,6 +48,7 @@ export function EventsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("upcoming")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -79,21 +80,48 @@ export function EventsPage() {
   }
 
   const createEvent = async () => {
-    if (!formData.title || !formData.description || !formData.start_date) return
+    if (!formData.title || !formData.description || !formData.start_date) {
+      alert("Por favor completa todos los campos requeridos")
+      return
+    }
+
+    if (!session?.user?.email) {
+      alert("Debes estar logueado para crear eventos")
+      return
+    }
 
     try {
+      setIsCreating(true)
+      console.log("Creating event with session:", session.user.email)
+
+      // Preparar headers con información de sesión
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+
+      // Agregar información de usuario en headers personalizados
+      if (session.user.email) {
+        headers["X-User-Email"] = session.user.email
+      }
+      if (session.user.id) {
+        headers["X-User-ID"] = session.user.id
+      }
+
       const response = await fetch("/api/events", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           ...formData,
           max_participants: formData.max_participants ? Number.parseInt(formData.max_participants) : null,
         }),
       })
 
+      console.log("Response status:", response.status)
+
       if (response.ok) {
+        const newEvent = await response.json()
+        console.log("Event created successfully:", newEvent)
+
         setIsCreateModalOpen(false)
         setFormData({
           title: "",
@@ -105,37 +133,86 @@ export function EventsPage() {
           event_type: "tournament",
         })
         fetchEvents()
+        alert("¡Evento creado exitosamente!")
+      } else {
+        const errorData = await response.json()
+        console.error("Error response:", errorData)
+        alert(`Error al crear evento: ${errorData.error || "Error desconocido"}`)
       }
     } catch (error) {
       console.error("Error creating event:", error)
+      alert("Error al crear evento. Por favor intenta de nuevo.")
+    } finally {
+      setIsCreating(false)
     }
   }
 
   const joinEvent = async (eventId: string) => {
+    if (!session?.user?.email) {
+      alert("Debes estar logueado para unirte a eventos")
+      return
+    }
+
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+
+      if (session.user.email) {
+        headers["X-User-Email"] = session.user.email
+      }
+      if (session.user.id) {
+        headers["X-User-ID"] = session.user.id
+      }
+
       const response = await fetch(`/api/events/${eventId}/join`, {
         method: "POST",
+        headers,
       })
 
       if (response.ok) {
         fetchEvents()
+        alert("¡Te has unido al evento!")
+      } else {
+        const errorData = await response.json()
+        alert(`Error: ${errorData.error || "No se pudo unir al evento"}`)
       }
     } catch (error) {
       console.error("Error joining event:", error)
+      alert("Error al unirse al evento")
     }
   }
 
   const leaveEvent = async (eventId: string) => {
+    if (!session?.user?.email) return
+
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+
+      if (session.user.email) {
+        headers["X-User-Email"] = session.user.email
+      }
+      if (session.user.id) {
+        headers["X-User-ID"] = session.user.id
+      }
+
       const response = await fetch(`/api/events/${eventId}/join`, {
         method: "DELETE",
+        headers,
       })
 
       if (response.ok) {
         fetchEvents()
+        alert("Has salido del evento")
+      } else {
+        const errorData = await response.json()
+        alert(`Error: ${errorData.error || "No se pudo salir del evento"}`)
       }
     } catch (error) {
       console.error("Error leaving event:", error)
+      alert("Error al salir del evento")
     }
   }
 
@@ -273,9 +350,10 @@ export function EventsPage() {
                     </div>
                     <Button
                       onClick={createEvent}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg"
+                      disabled={isCreating}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg disabled:opacity-50"
                     >
-                      Crear Evento
+                      {isCreating ? "Creando..." : "Crear Evento"}
                     </Button>
                   </div>
                 </DialogContent>
