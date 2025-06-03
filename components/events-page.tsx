@@ -13,9 +13,9 @@ import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, TrendingUp, Sta
 import { useSession } from "next-auth/react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { PageLayout } from "./page-layout"
-import { PageHeader } from "./page-header"
-import { StatsCards } from "./stats-cards"
+import { PageLayout } from "@/components/page-layout"
+import { PageHeader } from "@/components/page-header"
+import { StatsCards } from "@/components/stats-cards"
 
 interface Event {
   id: string

@@ -62,10 +62,10 @@ export function StatsCards({ stats }: StatsCardsProps) {
         return (
           <Card
             key={index}
-            className={bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 ${getHoverBorderClass(stat.color)} transition-colors}
+            className={`bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 ${getHoverBorderClass(stat.color)} transition-colors`}
           >
             <CardContent className="p-6 text-center">
-              <Icon className={h-8 w-8 mx-auto mb-3 ${getColorClass(stat.color)}} />
+              <Icon className={`h-8 w-8 mx-auto mb-3 ${getColorClass(stat.color)}`} />
               <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
               <div className="text-sm text-slate-400">{stat.label}</div>
             </CardContent>
