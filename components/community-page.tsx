@@ -114,6 +114,9 @@ export function CommunityPage() {
 
     setIsPosting(true)
     try {
+      console.log("Creating post with session:", session.user?.id)
+      console.log("Post content:", newPost)
+
       const tags = [...selectedTags]
       if (selectedGame) tags.push(selectedGame)
 
@@ -128,15 +131,23 @@ export function CommunityPage() {
         }),
       })
 
+      console.log("Response status:", response.status)
+
       if (response.ok) {
         const newPostData = await response.json()
+        console.log("New post created:", newPostData)
         setPosts([newPostData, ...posts])
         setNewPost("")
         setSelectedGame("")
         setSelectedTags([])
+      } else {
+        const errorData = await response.json()
+        console.error("Error response:", errorData)
+        alert("Error al crear el post: " + (errorData.error || "Error desconocido"))
       }
     } catch (error) {
       console.error("Error creating post:", error)
+      alert("Error al crear el post. Revisa la consola para más detalles.")
     } finally {
       setIsPosting(false)
     }
