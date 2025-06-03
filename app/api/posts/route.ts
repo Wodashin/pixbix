@@ -1,14 +1,34 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
+import { getServerSession } from "next-auth/next"
+import { supabaseAdmin } from "@/lib/supabase"
+
+// Importar authOptions desde el archivo de NextAuth
+const authOptions = {
+  // Configuración básica para getServerSession
+  session: {
+    strategy: "jwt" as const,
+  },
+  callbacks: {
+    async jwt({ token, user }: any) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }: any) {
+      if (token) {
+        session.user.id = token.id
+      }
+      return session
+    },
+  },
+}
 
 export async function GET() {
   try {
-    const supabase = createClient()
+    console.log("📖 Obteniendo posts...")
 
-    const { data: posts, error } = await supabase
+    const { data: posts, error } = await supabaseAdmin!
       .from("posts")
       .select(`
         *,
@@ -20,116 +40,74 @@ export async function GET() {
         )
       `)
       .order("created_at", { ascending: false })
-      .limit(20)
 
     if (error) {
-      console.error("Error fetching posts:", error)
-      return NextResponse.json([])
+      console.error("❌ Error obteniendo posts:", error)
+      return NextResponse.json({ error: "Error obteniendo posts" }, { status: 500 })
     }
 
-    // Para cada post, obtener conteos de likes y comentarios
-    const postsWithCounts = await Promise.all(
-      (posts || []).map(async (post) => {
-        // Contar likes
-        const { count: likesCount } = await supabase
-          .from("likes")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", post.id)
-
-        // Contar comentarios
-        const { count: commentsCount } = await supabase
-          .from("comments")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", post.id)
-
-        return {
-          ...post,
-          user: post.users,
-          likes_count: likesCount || 0,
-          comments_count: commentsCount || 0,
-          shares_count: 0,
-          views_count: Math.floor(Math.random() * 100) + 10,
-        }
-      }),
-    )
-
-    return NextResponse.json(postsWithCounts)
+    console.log(`✅ Posts obtenidos: ${posts?.length || 0}`)
+    return NextResponse.json({ posts: posts || [] })
   } catch (error) {
-    console.error("Error fetching posts:", error)
-    return NextResponse.json([])
+    console.error("💥 Error general:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("POST /api/posts - Starting...")
+    console.log("🔍 Verificando sesión...")
 
-    // Verificar cookies
-    const cookieStore = cookies()
-    const sessionToken =
-      cookieStore.get("next-auth.session-token") || cookieStore.get("__Secure-next-auth.session-token")
-    console.log("Session token found:", !!sessionToken)
-
-    // Intentar obtener la sesión con diferentes métodos
-    let session = null
-
-    try {
-      session = await getServerSession(authOptions)
-      console.log("getServerSession result:", session?.user?.id)
-    } catch (sessionError) {
-      console.error("Error getting session:", sessionError)
-    }
-
-    // Si no hay sesión, intentar con el request
-    if (!session) {
-      try {
-        const req = {
-          headers: Object.fromEntries(request.headers.entries()),
-          cookies: Object.fromEntries(cookieStore.getAll().map((cookie) => [cookie.name, cookie.value])),
-        }
-        session = await getServerSession(req as any, {} as any, authOptions)
-        console.log("getServerSession with request result:", session?.user?.id)
-      } catch (sessionError2) {
-        console.error("Error getting session with request:", sessionError2)
-      }
-    }
+    // Intentar obtener la sesión de múltiples formas
+    const session = await getServerSession(authOptions)
+    console.log("📋 Sesión obtenida:", session ? "✅ Válida" : "❌ Nula")
 
     if (!session?.user?.id) {
-      console.log("No session found after all attempts")
-      return NextResponse.json(
-        {
-          error: "Unauthorized - No session",
-          debug: {
-            hasSessionToken: !!sessionToken,
-            sessionTokenName: sessionToken?.name,
-            cookieCount: cookieStore.getAll().length,
-          },
-        },
-        { status: 401 },
-      )
+      console.log("❌ No hay sesión válida")
+      return NextResponse.json({ error: "Unauthorized - No session" }, { status: 401 })
     }
+
+    console.log("👤 Usuario autenticado:", session.user.id)
 
     const body = await request.json()
-    console.log("Request body:", body)
+    console.log("📝 Datos recibidos:", body)
 
-    const { content, image_url, tags } = body
+    const { content, game_tags = [], image_url = null } = body
 
-    if (!content?.trim()) {
-      console.log("No content provided")
-      return NextResponse.json({ error: "Content is required" }, { status: 400 })
+    if (!content || content.trim().length === 0) {
+      console.log("❌ Contenido vacío")
+      return NextResponse.json({ error: "El contenido es requerido" }, { status: 400 })
     }
 
-    const supabase = createClient()
-    console.log("Creating post for user:", session.user.id)
+    // Buscar el usuario en Supabase
+    console.log("🔍 Buscando usuario en Supabase...")
+    const { data: user, error: userError } = await supabaseAdmin!
+      .from("users")
+      .select("id, email")
+      .eq("email", session.user.email)
+      .single()
 
-    const { data: post, error } = await supabase
+    if (userError || !user) {
+      console.error("❌ Usuario no encontrado en Supabase:", userError)
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+    }
+
+    console.log("✅ Usuario encontrado:", user.id)
+
+    // Crear el post
+    console.log("📝 Creando post...")
+    const postData = {
+      user_id: user.id,
+      content: content.trim(),
+      game_tags: game_tags,
+      image_url: image_url,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const { data: newPost, error: postError } = await supabaseAdmin!
       .from("posts")
-      .insert({
-        user_id: session.user.id,
-        content: content.trim(),
-        image_url,
-        tags: tags || [],
-      })
+      .insert([postData])
       .select(`
         *,
         users!posts_user_id_fkey (
@@ -141,37 +119,15 @@ export async function POST(request: NextRequest) {
       `)
       .single()
 
-    if (error) {
-      console.error("Supabase error creating post:", error)
-      return NextResponse.json(
-        {
-          error: "Error creating post in database",
-          details: error.message,
-        },
-        { status: 500 },
-      )
+    if (postError) {
+      console.error("❌ Error creando post:", postError)
+      return NextResponse.json({ error: "Error creando el post" }, { status: 500 })
     }
 
-    console.log("Post created successfully:", post)
-
-    const responseData = {
-      ...post,
-      user: post.users,
-      likes_count: 0,
-      comments_count: 0,
-      shares_count: 0,
-      views_count: 0,
-    }
-
-    return NextResponse.json(responseData)
+    console.log("🎉 Post creado exitosamente:", newPost.id)
+    return NextResponse.json({ post: newPost }, { status: 201 })
   } catch (error) {
-    console.error("Error creating post:", error)
-    return NextResponse.json(
-      {
-        error: "Error creating post",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("💥 Error general en POST:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
