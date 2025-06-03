@@ -49,7 +49,6 @@ export function EventsPage() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("upcoming")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  // Form state
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -183,7 +182,6 @@ export function EventsPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Eventos Gaming</h1>
@@ -279,7 +277,6 @@ export function EventsPage() {
           )}
         </div>
 
-        {/* Filters */}
         <div className="flex space-x-4 mb-8">
           <Button
             variant={filter === "upcoming" ? "default" : "secondary"}
@@ -310,7 +307,6 @@ export function EventsPage() {
           </Button>
         </div>
 
-        {/* Events Grid */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-slate-400">Cargando eventos...</div>
@@ -456,7 +452,6 @@ export function EventsPage() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "past">("upcoming")
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
-  // Form state
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -590,7 +585,6 @@ export function EventsPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Eventos Gaming</h1>
@@ -686,7 +680,6 @@ export function EventsPage() {
           )}
         </div>
 
-        {/* Filters */}
         <div className="flex space-x-4 mb-8">
           <Button
             variant={filter === "upcoming" ? "default" : "secondary"}
@@ -717,7 +710,6 @@ export function EventsPage() {
           </Button>
         </div>
 
-        {/* Events Grid */}
         {isLoading ? (
           <div className="text-center py-12">
             <div className="text-slate-400">Cargando eventos...</div>
