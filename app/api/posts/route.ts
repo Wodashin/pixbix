@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
 
 export async function GET() {
   try {
@@ -63,12 +64,49 @@ export async function POST(request: NextRequest) {
   try {
     console.log("POST /api/posts - Starting...")
 
-    const session = await getServerSession(authOptions)
-    console.log("Session:", session?.user?.id)
+    // Verificar cookies
+    const cookieStore = cookies()
+    const sessionToken =
+      cookieStore.get("next-auth.session-token") || cookieStore.get("__Secure-next-auth.session-token")
+    console.log("Session token found:", !!sessionToken)
+
+    // Intentar obtener la sesión con diferentes métodos
+    let session = null
+
+    try {
+      session = await getServerSession(authOptions)
+      console.log("getServerSession result:", session?.user?.id)
+    } catch (sessionError) {
+      console.error("Error getting session:", sessionError)
+    }
+
+    // Si no hay sesión, intentar con el request
+    if (!session) {
+      try {
+        const req = {
+          headers: Object.fromEntries(request.headers.entries()),
+          cookies: Object.fromEntries(cookieStore.getAll().map((cookie) => [cookie.name, cookie.value])),
+        }
+        session = await getServerSession(req as any, {} as any, authOptions)
+        console.log("getServerSession with request result:", session?.user?.id)
+      } catch (sessionError2) {
+        console.error("Error getting session with request:", sessionError2)
+      }
+    }
 
     if (!session?.user?.id) {
-      console.log("No session found")
-      return NextResponse.json({ error: "Unauthorized - No session" }, { status: 401 })
+      console.log("No session found after all attempts")
+      return NextResponse.json(
+        {
+          error: "Unauthorized - No session",
+          debug: {
+            hasSessionToken: !!sessionToken,
+            sessionTokenName: sessionToken?.name,
+            cookieCount: cookieStore.getAll().length,
+          },
+        },
+        { status: 401 },
+      )
     }
 
     const body = await request.json()
