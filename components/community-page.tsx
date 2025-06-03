@@ -553,10 +553,6 @@ export function CommunityPage() {
                 <Calendar className="mr-2 h-4 w-4" />
                 Ver Eventos
               </Button>
-              <Button variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Chat Global
-              </Button>
             </CardContent>
           </Card>
         </div>
