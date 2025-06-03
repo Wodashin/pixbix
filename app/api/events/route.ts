@@ -121,22 +121,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Obtener el ID del usuario si no lo tenemos
-    if (!userId) {
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", userEmail)
-        .single()
+    // Obtener el ID del usuario desde la base de datos (para asegurar un UUID válido)
+    console.log("Fetching user ID from database for email:", userEmail)
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", userEmail)
+      .single()
 
-      if (userError || !userData) {
-        console.error("User not found for email:", userEmail, userError)
-        return NextResponse.json({ error: "User not found" }, { status: 404 })
-      }
-      userId = userData.id
+    if (userError || !userData) {
+      console.error("User not found for email:", userEmail, userError)
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    console.log("Creating event for user:", userId)
+    // Usar el ID de la base de datos que garantiza ser un UUID válido
+    const validUserId = userData.id
+    console.log("Found valid user ID from database:", validUserId)
+
+    console.log("Creating event for user:", validUserId)
 
     const { data: event, error } = await supabase
       .from("events")
@@ -148,7 +150,7 @@ export async function POST(request: NextRequest) {
         end_date,
         max_participants: max_participants || null,
         event_type: event_type || "tournament",
-        creator_id: userId,
+        creator_id: validUserId, // Usar el ID válido de la base de datos
       })
       .select()
       .single()
