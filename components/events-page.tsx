@@ -13,9 +13,8 @@ import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, TrendingUp, Sta
 import { useSession } from "next-auth/react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { PageLayout } from "@/components/page-layout"
-import { PageHeader } from "@/components/page-header"
-import { StatsCards } from "@/components/stats-cards"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 
 interface Event {
   id: string
@@ -286,329 +285,354 @@ export function EventsPage() {
   ]
 
   return (
-    <PageLayout>
-      <div className="container mx-auto px-4 py-8">
-        {/* Header con botón de crear evento */}
-        <PageHeader
-          title="Eventos Gaming"
-          description="Conecta con gamers de todo el mundo, únete a torneos y descubre nuevas experiencias"
-        >
-          {session && (
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Evento
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl">Crear Nuevo Evento</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6">
-                  <Input
-                    placeholder="Título del evento"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="bg-slate-800 border-slate-600 h-12"
-                  />
-                  <Textarea
-                    placeholder="Descripción del evento"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-slate-800 border-slate-600 min-h-[100px]"
-                  />
-                  <Input
-                    placeholder="Juego (ej: Valorant, League of Legends)"
-                    value={formData.game}
-                    onChange={(e) => setFormData({ ...formData, game: e.target.value })}
-                    className="bg-slate-800 border-slate-600 h-12"
-                  />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-slate-400 mb-2 block">Fecha de inicio</label>
+    <div className="min-h-screen bg-slate-900 text-white">
+      <Header />
+      <main>
+        <div className="container mx-auto px-4 py-8">
+          {/* Header con título y botón de crear evento */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Eventos Gaming</h1>
+                <p className="text-xl text-slate-400">
+                  Conecta con gamers de todo el mundo, únete a torneos y descubre nuevas experiencias
+                </p>
+              </div>
+              {session && (
+                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear Evento
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl">Crear Nuevo Evento</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-6">
                       <Input
-                        type="datetime-local"
-                        value={formData.start_date}
-                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        placeholder="Título del evento"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         className="bg-slate-800 border-slate-600 h-12"
                       />
-                    </div>
-                    <div>
-                      <label className="text-sm text-slate-400 mb-2 block">Fecha de fin (opcional)</label>
+                      <Textarea
+                        placeholder="Descripción del evento"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="bg-slate-800 border-slate-600 min-h-[100px]"
+                      />
                       <Input
-                        type="datetime-local"
-                        value={formData.end_date}
-                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        placeholder="Juego (ej: Valorant, League of Legends)"
+                        value={formData.game}
+                        onChange={(e) => setFormData({ ...formData, game: e.target.value })}
                         className="bg-slate-800 border-slate-600 h-12"
                       />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm text-slate-400 mb-2 block">Tipo de evento</label>
-                      <Select
-                        value={formData.event_type}
-                        onValueChange={(value: any) => setFormData({ ...formData, event_type: value })}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 mb-2 block">Fecha de inicio</label>
+                          <Input
+                            type="datetime-local"
+                            value={formData.start_date}
+                            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                            className="bg-slate-800 border-slate-600 h-12"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 mb-2 block">Fecha de fin (opcional)</label>
+                          <Input
+                            type="datetime-local"
+                            value={formData.end_date}
+                            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                            className="bg-slate-800 border-slate-600 h-12"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-slate-400 mb-2 block">Tipo de evento</label>
+                          <Select
+                            value={formData.event_type}
+                            onValueChange={(value: any) => setFormData({ ...formData, event_type: value })}
+                          >
+                            <SelectTrigger className="bg-slate-800 border-slate-600 h-12">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-800 border-slate-600">
+                              <SelectItem value="tournament">🏆 Torneo</SelectItem>
+                              <SelectItem value="casual">🎮 Casual</SelectItem>
+                              <SelectItem value="training">👥 Entrenamiento</SelectItem>
+                              <SelectItem value="meetup">📍 Meetup</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-sm text-slate-400 mb-2 block">Máx. participantes (opcional)</label>
+                          <Input
+                            type="number"
+                            placeholder="Sin límite"
+                            value={formData.max_participants}
+                            onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
+                            className="bg-slate-800 border-slate-600 h-12"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        onClick={createEvent}
+                        disabled={isCreating}
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg disabled:opacity-50"
                       >
-                        <SelectTrigger className="bg-slate-800 border-slate-600 h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-slate-800 border-slate-600">
-                          <SelectItem value="tournament">🏆 Torneo</SelectItem>
-                          <SelectItem value="casual">🎮 Casual</SelectItem>
-                          <SelectItem value="training">👥 Entrenamiento</SelectItem>
-                          <SelectItem value="meetup">📍 Meetup</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        {isCreating ? "Creando..." : "Crear Evento"}
+                      </Button>
                     </div>
-                    <div>
-                      <label className="text-sm text-slate-400 mb-2 block">Máx. participantes (opcional)</label>
-                      <Input
-                        type="number"
-                        placeholder="Sin límite"
-                        value={formData.max_participants}
-                        onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
-                        className="bg-slate-800 border-slate-600 h-12"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    onClick={createEvent}
-                    disabled={isCreating}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg disabled:opacity-50"
-                  >
-                    {isCreating ? "Creando..." : "Crear Evento"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-        </PageHeader>
-
-        {/* Stats Cards */}
-        <StatsCards stats={stats} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Filtros */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-              <div className="flex flex-wrap gap-3 mb-4 md:mb-0">
-                <Button
-                  variant={filter === "upcoming" ? "default" : "secondary"}
-                  onClick={() => setFilter("upcoming")}
-                  className={
-                    filter === "upcoming"
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
-                  }
-                >
-                  🔥 Próximos
-                </Button>
-                <Button
-                  variant={filter === "all" ? "default" : "secondary"}
-                  onClick={() => setFilter("all")}
-                  className={
-                    filter === "all"
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
-                  }
-                >
-                  📅 Todos
-                </Button>
-                <Button
-                  variant={filter === "past" ? "default" : "secondary"}
-                  onClick={() => setFilter("past")}
-                  className={
-                    filter === "past"
-                      ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      : "bg-slate-700 hover:bg-slate-600 text-slate-300"
-                  }
-                >
-                  📚 Pasados
-                </Button>
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filtros
-                </Button>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-                  <Input
-                    placeholder="Buscar eventos..."
-                    className="pl-10 bg-slate-800 border-slate-600 text-slate-100 w-64"
-                  />
-                </div>
-              </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
 
-            {/* Lista de eventos */}
-            {isLoading ? (
-              <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
-                <div className="text-slate-400">Cargando eventos...</div>
-              </div>
-            ) : events.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {events.map((event) => (
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              {stats.map((stat, index) => {
+                const Icon = stat.icon
+                return (
                   <Card
-                    key={event.id}
-                    className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-purple-500 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
+                    key={index}
+                    className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-cyan-500 transition-colors"
                   >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-white text-xl mb-3 line-clamp-1">{event.title}</CardTitle>
-                          <div className="flex items-center space-x-2 mb-3">
-                            <Badge className={`${getEventTypeColor(event.event_type)} text-white px-3 py-1`}>
-                              {getEventTypeIcon(event.event_type)}
-                              <span className="ml-1 capitalize">{event.event_type}</span>
-                            </Badge>
-                            {event.game && (
-                              <Badge variant="outline" className="text-cyan-400 border-cyan-400 px-3 py-1">
-                                🎮 {event.game}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-slate-300 text-sm mb-6 line-clamp-2">{event.description}</p>
-
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center text-sm text-slate-400">
-                          <Calendar className="h-4 w-4 mr-3 text-cyan-400" />
-                          {format(new Date(event.start_date), "PPP", { locale: es })}
-                        </div>
-                        <div className="flex items-center text-sm text-slate-400">
-                          <Clock className="h-4 w-4 mr-3 text-green-400" />
-                          {format(new Date(event.start_date), "p", { locale: es })}
-                        </div>
-                        <div className="flex items-center text-sm text-slate-400">
-                          <Users className="h-4 w-4 mr-3 text-purple-400" />
-                          {event.participants.length}
-                          {event.max_participants && ` / ${event.max_participants}`} participantes
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar className="h-8 w-8 border-2 border-slate-600">
-                            <AvatarImage src={event.creator.avatar_url || ""} />
-                            <AvatarFallback className="text-xs bg-slate-700">
-                              {event.creator.display_name?.[0] || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm text-slate-300 font-medium">{event.creator.display_name}</span>
-                        </div>
-
-                        {session && (
-                          <div>
-                            {isUserJoined(event) ? (
-                              <Button
-                                size="sm"
-                                onClick={() => leaveEvent(event.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white border-0"
-                              >
-                                Salir
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                onClick={() => joinEvent(event.id)}
-                                disabled={isEventFull(event)}
-                                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50"
-                              >
-                                {isEventFull(event) ? "Lleno" : "Unirse"}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                    <CardContent className="p-6 text-center">
+                      <Icon className={`h-8 w-8 mx-auto mb-3 text-${stat.color}-400`} />
+                      <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                      <div className="text-sm text-slate-400">{stat.label}</div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <Calendar className="h-20 w-20 text-slate-600 mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold text-slate-400 mb-3">No hay eventos</h3>
-                <p className="text-slate-500 mb-6">
-                  {filter === "upcoming" ? "No hay eventos próximos" : "No se encontraron eventos"}
-                </p>
-                {session && (
-                  <Button
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    onClick={() => setIsCreateModalOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear el primer evento
-                  </Button>
-                )}
-              </div>
-            )}
+                )
+              })}
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Trending */}
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <TrendingUp className="mr-2 h-5 w-5 text-cyan-400" />🔥 Trending
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Trophy className="h-5 w-5 text-yellow-400" />
-                    <span className="text-white font-medium">#Valorant Champions</span>
-                  </div>
-                  <Badge className="bg-yellow-500 text-white">Hot</Badge>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Main Content */}
+            <div className="lg:col-span-3">
+              {/* Filtros */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                <div className="flex flex-wrap gap-3 mb-4 md:mb-0">
+                  <Button
+                    variant={filter === "upcoming" ? "default" : "secondary"}
+                    onClick={() => setFilter("upcoming")}
+                    className={
+                      filter === "upcoming"
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                    }
+                  >
+                    🔥 Próximos
+                  </Button>
+                  <Button
+                    variant={filter === "all" ? "default" : "secondary"}
+                    onClick={() => setFilter("all")}
+                    className={
+                      filter === "all"
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                    }
+                  >
+                    📅 Todos
+                  </Button>
+                  <Button
+                    variant={filter === "past" ? "default" : "secondary"}
+                    onClick={() => setFilter("past")}
+                    className={
+                      filter === "past"
+                        ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        : "bg-slate-700 hover:bg-slate-600 text-slate-300"
+                    }
+                  >
+                    📚 Pasados
+                  </Button>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Gamepad2 className="h-5 w-5 text-green-400" />
-                    <span className="text-white font-medium">#League Worlds</span>
-                  </div>
-                  <Badge className="bg-green-500 text-white">Live</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Users className="h-5 w-5 text-blue-400" />
-                    <span className="text-white font-medium">#CS2 Training</span>
-                  </div>
-                  <Badge className="bg-blue-500 text-white">New</Badge>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Acciones Rápidas */}
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
-                  <Users className="mr-2 h-4 w-4" />
-                  Encontrar Compañeros
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Mis Eventos
-                </Button>
-              </CardContent>
-            </Card>
+                <div className="flex gap-3">
+                  <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filtros
+                  </Button>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Input
+                      placeholder="Buscar eventos..."
+                      className="pl-10 bg-slate-800 border-slate-600 text-slate-100 w-64"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de eventos */}
+              {isLoading ? (
+                <div className="text-center py-16">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                  <div className="text-slate-400">Cargando eventos...</div>
+                </div>
+              ) : events.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {events.map((event) => (
+                    <Card
+                      key={event.id}
+                      className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-purple-500 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20"
+                    >
+                      <CardHeader className="pb-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <CardTitle className="text-white text-xl mb-3 line-clamp-1">{event.title}</CardTitle>
+                            <div className="flex items-center space-x-2 mb-3">
+                              <Badge className={`${getEventTypeColor(event.event_type)} text-white px-3 py-1`}>
+                                {getEventTypeIcon(event.event_type)}
+                                <span className="ml-1 capitalize">{event.event_type}</span>
+                              </Badge>
+                              {event.game && (
+                                <Badge variant="outline" className="text-cyan-400 border-cyan-400 px-3 py-1">
+                                  🎮 {event.game}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-slate-300 text-sm mb-6 line-clamp-2">{event.description}</p>
+
+                        <div className="space-y-3 mb-6">
+                          <div className="flex items-center text-sm text-slate-400">
+                            <Calendar className="h-4 w-4 mr-3 text-cyan-400" />
+                            {format(new Date(event.start_date), "PPP", { locale: es })}
+                          </div>
+                          <div className="flex items-center text-sm text-slate-400">
+                            <Clock className="h-4 w-4 mr-3 text-green-400" />
+                            {format(new Date(event.start_date), "p", { locale: es })}
+                          </div>
+                          <div className="flex items-center text-sm text-slate-400">
+                            <Users className="h-4 w-4 mr-3 text-purple-400" />
+                            {event.participants.length}
+                            {event.max_participants && ` / ${event.max_participants}`} participantes
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-8 w-8 border-2 border-slate-600">
+                              <AvatarImage src={event.creator.avatar_url || ""} />
+                              <AvatarFallback className="text-xs bg-slate-700">
+                                {event.creator.display_name?.[0] || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-slate-300 font-medium">{event.creator.display_name}</span>
+                          </div>
+
+                          {session && (
+                            <div>
+                              {isUserJoined(event) ? (
+                                <Button
+                                  size="sm"
+                                  onClick={() => leaveEvent(event.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white border-0"
+                                >
+                                  Salir
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => joinEvent(event.id)}
+                                  disabled={isEventFull(event)}
+                                  className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50"
+                                >
+                                  {isEventFull(event) ? "Lleno" : "Unirse"}
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <Calendar className="h-20 w-20 text-slate-600 mx-auto mb-6" />
+                  <h3 className="text-2xl font-semibold text-slate-400 mb-3">No hay eventos</h3>
+                  <p className="text-slate-500 mb-6">
+                    {filter === "upcoming" ? "No hay eventos próximos" : "No se encontraron eventos"}
+                  </p>
+                  {session && (
+                    <Button
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                      onClick={() => setIsCreateModalOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crear el primer evento
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Trending */}
+              <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center">
+                    <TrendingUp className="mr-2 h-5 w-5 text-cyan-400" />🔥 Trending
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Trophy className="h-5 w-5 text-yellow-400" />
+                      <span className="text-white font-medium">#Valorant Champions</span>
+                    </div>
+                    <Badge className="bg-yellow-500 text-white">Hot</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Gamepad2 className="h-5 w-5 text-green-400" />
+                      <span className="text-white font-medium">#League Worlds</span>
+                    </div>
+                    <Badge className="bg-green-500 text-white">Live</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Users className="h-5 w-5 text-blue-400" />
+                      <span className="text-white font-medium">#CS2 Training</span>
+                    </div>
+                    <Badge className="bg-blue-500 text-white">New</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Acciones Rápidas */}
+              <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
+                    <Users className="mr-2 h-4 w-4" />
+                    Encontrar Compañeros
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Mis Eventos
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
-    </PageLayout>
+      </main>
+      <Footer />
+    </div>
   )
 }
