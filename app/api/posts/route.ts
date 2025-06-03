@@ -61,18 +61,28 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("POST /api/posts - Starting...")
+
     const session = await getServerSession(authOptions)
+    console.log("Session:", session?.user?.id)
+
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      console.log("No session found")
+      return NextResponse.json({ error: "Unauthorized - No session" }, { status: 401 })
     }
 
-    const { content, image_url, tags, game } = await request.json()
+    const body = await request.json()
+    console.log("Request body:", body)
+
+    const { content, image_url, tags } = body
 
     if (!content?.trim()) {
+      console.log("No content provided")
       return NextResponse.json({ error: "Content is required" }, { status: 400 })
     }
 
     const supabase = createClient()
+    console.log("Creating post for user:", session.user.id)
 
     const { data: post, error } = await supabase
       .from("posts")
@@ -94,20 +104,36 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error("Error creating post:", error)
-      return NextResponse.json({ error: "Error creating post" }, { status: 500 })
+      console.error("Supabase error creating post:", error)
+      return NextResponse.json(
+        {
+          error: "Error creating post in database",
+          details: error.message,
+        },
+        { status: 500 },
+      )
     }
 
-    return NextResponse.json({
+    console.log("Post created successfully:", post)
+
+    const responseData = {
       ...post,
       user: post.users,
       likes_count: 0,
       comments_count: 0,
       shares_count: 0,
       views_count: 0,
-    })
+    }
+
+    return NextResponse.json(responseData)
   } catch (error) {
     console.error("Error creating post:", error)
-    return NextResponse.json({ error: "Error creating post" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Error creating post",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
