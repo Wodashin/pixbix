@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useSession } from "next-auth/react"
 import { GameSelectorModal } from "@/components/game-selector-modal"
+import { createClient } from "@/utils/supabase/client"
 
 interface CommunityStats {
   activeUsers: number
@@ -55,6 +56,7 @@ export function CommunityPage() {
     upcomingEvents: 0,
   })
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
+  const supabase = createClient()
 
   // Fetch community stats
   useEffect(() => {
@@ -97,7 +99,7 @@ export function CommunityPage() {
         const response = await fetch("/api/posts")
         if (response.ok) {
           const data = await response.json()
-          setPosts(data)
+          setPosts(Array.isArray(data) ? data : data.posts || [])
         }
       } catch (error) {
         console.error("Error fetching posts:", error)
@@ -120,6 +122,50 @@ export function CommunityPage() {
       const tags = [...selectedTags]
       if (selectedGame) tags.push(selectedGame)
 
+      // Intentar primero con Supabase directamente
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        console.log("Using Supabase user:", user.id)
+
+        const { data: post, error } = await supabase
+          .from("posts")
+          .insert({
+            user_id: user.id,
+            content: newPost.trim(),
+            tags: tags.length > 0 ? tags : undefined,
+          })
+          .select()
+          .single()
+
+        if (!error) {
+          console.log("Post created with Supabase:", post)
+          // Recargar posts
+          const { data: freshPosts } = await supabase
+            .from("posts")
+            .select(`
+              *,
+              users!posts_user_id_fkey (
+                id,
+                username,
+                display_name,
+                avatar_url
+              )
+            `)
+            .order("created_at", { ascending: false })
+            .limit(20)
+
+          setPosts(freshPosts || [])
+          setNewPost("")
+          setSelectedGame("")
+          setSelectedTags([])
+          return
+        }
+      }
+
+      // Si falla Supabase, intentar con la API
       const response = await fetch("/api/posts", {
         method: "POST",
         headers: {
@@ -136,7 +182,17 @@ export function CommunityPage() {
       if (response.ok) {
         const newPostData = await response.json()
         console.log("New post created:", newPostData)
-        setPosts([newPostData, ...posts])
+
+        // Recargar posts en lugar de añadir manualmente
+        const refreshResponse = await fetch("/api/posts")
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json()
+          setPosts(Array.isArray(refreshData) ? refreshData : refreshData.posts || [])
+        } else {
+          // Si falla la recarga, añadir manualmente
+          setPosts([newPostData, ...posts])
+        }
+
         setNewPost("")
         setSelectedGame("")
         setSelectedTags([])
