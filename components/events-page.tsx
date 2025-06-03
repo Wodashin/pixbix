@@ -13,6 +13,9 @@ import { Calendar, Clock, Users, Trophy, Gamepad2, Plus, MapPin, TrendingUp, Sta
 import { useSession } from "next-auth/react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
+import { PageLayout } from "@/components/page-layout"
+import { PageHeader } from "@/components/page-header"
+import { StatsCards } from "@/components/stats-cards"
 
 interface Event {
   id: string
@@ -94,12 +97,10 @@ export function EventsPage() {
       setIsCreating(true)
       console.log("Creating event with session:", session.user.email)
 
-      // Preparar headers con información de sesión
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       }
 
-      // Agregar información de usuario en headers personalizados
       if (session.user.email) {
         headers["X-User-Email"] = session.user.email
       }
@@ -256,154 +257,142 @@ export function EventsPage() {
     return event.participants.length >= event.max_participants
   }
 
-  return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header moderno */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">Eventos Gaming</h1>
-              <p className="text-xl text-slate-400">
-                Conecta con gamers de todo el mundo, únete a torneos y descubre nuevas experiencias
-              </p>
-            </div>
-            {session && (
-              <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear Evento
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl">Crear Nuevo Evento</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-6">
-                    <Input
-                      placeholder="Título del evento"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="bg-slate-800 border-slate-600 h-12"
-                    />
-                    <Textarea
-                      placeholder="Descripción del evento"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="bg-slate-800 border-slate-600 min-h-[100px]"
-                    />
-                    <Input
-                      placeholder="Juego (ej: Valorant, League of Legends)"
-                      value={formData.game}
-                      onChange={(e) => setFormData({ ...formData, game: e.target.value })}
-                      className="bg-slate-800 border-slate-600 h-12"
-                    />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-slate-400 mb-2 block">Fecha de inicio</label>
-                        <Input
-                          type="datetime-local"
-                          value={formData.start_date}
-                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                          className="bg-slate-800 border-slate-600 h-12"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm text-slate-400 mb-2 block">Fecha de fin (opcional)</label>
-                        <Input
-                          type="datetime-local"
-                          value={formData.end_date}
-                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                          className="bg-slate-800 border-slate-600 h-12"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm text-slate-400 mb-2 block">Tipo de evento</label>
-                        <Select
-                          value={formData.event_type}
-                          onValueChange={(value: any) => setFormData({ ...formData, event_type: value })}
-                        >
-                          <SelectTrigger className="bg-slate-800 border-slate-600 h-12">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-slate-800 border-slate-600">
-                            <SelectItem value="tournament">🏆 Torneo</SelectItem>
-                            <SelectItem value="casual">🎮 Casual</SelectItem>
-                            <SelectItem value="training">👥 Entrenamiento</SelectItem>
-                            <SelectItem value="meetup">📍 Meetup</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-sm text-slate-400 mb-2 block">Máx. participantes (opcional)</label>
-                        <Input
-                          type="number"
-                          placeholder="Sin límite"
-                          value={formData.max_participants}
-                          onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
-                          className="bg-slate-800 border-slate-600 h-12"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      onClick={createEvent}
-                      disabled={isCreating}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg disabled:opacity-50"
-                    >
-                      {isCreating ? "Creando..." : "Crear Evento"}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+  // Stats para las cards
+  const stats = [
+    {
+      icon: Calendar,
+      value: events.length,
+      label: "Eventos Activos",
+      color: "cyan",
+    },
+    {
+      icon: Users,
+      value: events.reduce((acc, event) => acc + event.participants.length, 0),
+      label: "Participantes",
+      color: "green",
+    },
+    {
+      icon: Trophy,
+      value: events.filter((e) => e.event_type === "tournament").length,
+      label: "Torneos",
+      color: "yellow",
+    },
+    {
+      icon: Star,
+      value: events.filter((e) => e.event_type === "casual").length,
+      label: "Eventos",
+      color: "purple",
+    },
+  ]
 
-          {/* Stats Cards modernas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-cyan-500 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Calendar className="h-8 w-8 mx-auto mb-3 text-cyan-400" />
-                <div className="text-3xl font-bold text-white mb-1">{events.length}</div>
-                <div className="text-sm text-slate-400">Eventos Activos</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-green-500 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Users className="h-8 w-8 mx-auto mb-3 text-green-400" />
-                <div className="text-3xl font-bold text-white mb-1">
-                  {events.reduce((acc, event) => acc + event.participants.length, 0)}
+  return (
+    <PageLayout>
+      <div className="container mx-auto px-4 py-8">
+        {/* Header con botón de crear evento */}
+        <PageHeader
+          title="Eventos Gaming"
+          description="Conecta con gamers de todo el mundo, únete a torneos y descubre nuevas experiencias"
+        >
+          {session && (
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Evento
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl">Crear Nuevo Evento</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6">
+                  <Input
+                    placeholder="Título del evento"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    className="bg-slate-800 border-slate-600 h-12"
+                  />
+                  <Textarea
+                    placeholder="Descripción del evento"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="bg-slate-800 border-slate-600 min-h-[100px]"
+                  />
+                  <Input
+                    placeholder="Juego (ej: Valorant, League of Legends)"
+                    value={formData.game}
+                    onChange={(e) => setFormData({ ...formData, game: e.target.value })}
+                    className="bg-slate-800 border-slate-600 h-12"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-slate-400 mb-2 block">Fecha de inicio</label>
+                      <Input
+                        type="datetime-local"
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        className="bg-slate-800 border-slate-600 h-12"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400 mb-2 block">Fecha de fin (opcional)</label>
+                      <Input
+                        type="datetime-local"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        className="bg-slate-800 border-slate-600 h-12"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-slate-400 mb-2 block">Tipo de evento</label>
+                      <Select
+                        value={formData.event_type}
+                        onValueChange={(value: any) => setFormData({ ...formData, event_type: value })}
+                      >
+                        <SelectTrigger className="bg-slate-800 border-slate-600 h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-slate-800 border-slate-600">
+                          <SelectItem value="tournament">🏆 Torneo</SelectItem>
+                          <SelectItem value="casual">🎮 Casual</SelectItem>
+                          <SelectItem value="training">👥 Entrenamiento</SelectItem>
+                          <SelectItem value="meetup">📍 Meetup</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400 mb-2 block">Máx. participantes (opcional)</label>
+                      <Input
+                        type="number"
+                        placeholder="Sin límite"
+                        value={formData.max_participants}
+                        onChange={(e) => setFormData({ ...formData, max_participants: e.target.value })}
+                        className="bg-slate-800 border-slate-600 h-12"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    onClick={createEvent}
+                    disabled={isCreating}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 h-12 text-lg disabled:opacity-50"
+                  >
+                    {isCreating ? "Creando..." : "Crear Evento"}
+                  </Button>
                 </div>
-                <div className="text-sm text-slate-400">Participantes</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-yellow-500 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Trophy className="h-8 w-8 mx-auto mb-3 text-yellow-400" />
-                <div className="text-3xl font-bold text-white mb-1">
-                  {events.filter((e) => e.event_type === "tournament").length}
-                </div>
-                <div className="text-sm text-slate-400">Torneos</div>
-              </CardContent>
-            </Card>
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700 hover:border-purple-500 transition-colors">
-              <CardContent className="p-6 text-center">
-                <Star className="h-8 w-8 mx-auto mb-3 text-purple-400" />
-                <div className="text-3xl font-bold text-white mb-1">
-                  {events.filter((e) => e.event_type === "casual").length}
-                </div>
-                <div className="text-sm text-slate-400">Eventos</div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </PageHeader>
+
+        {/* Stats Cards */}
+        <StatsCards stats={stats} />
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
-            {/* Filtros modernos */}
+            {/* Filtros */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
               <div className="flex flex-wrap gap-3 mb-4 md:mb-0">
                 <Button
@@ -456,7 +445,7 @@ export function EventsPage() {
               </div>
             </div>
 
-            {/* Lista de eventos moderna */}
+            {/* Lista de eventos */}
             {isLoading ? (
               <div className="text-center py-16">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
@@ -532,94 +521,4 @@ export function EventsPage() {
                                 size="sm"
                                 onClick={() => joinEvent(event.id)}
                                 disabled={isEventFull(event)}
-                                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:opacity-50"
-                              >
-                                {isEventFull(event) ? "Lleno" : "Unirse"}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <Calendar className="h-20 w-20 text-slate-600 mx-auto mb-6" />
-                <h3 className="text-2xl font-semibold text-slate-400 mb-3">No hay eventos</h3>
-                <p className="text-slate-500 mb-6">
-                  {filter === "upcoming" ? "No hay eventos próximos" : "No se encontraron eventos"}
-                </p>
-                {session && (
-                  <Button
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    onClick={() => setIsCreateModalOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear el primer evento
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar moderna */}
-          <div className="space-y-6">
-            {/* Trending */}
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <TrendingUp className="mr-2 h-5 w-5 text-cyan-400" />🔥 Trending
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Trophy className="h-5 w-5 text-yellow-400" />
-                    <span className="text-white font-medium">#Valorant Champions</span>
-                  </div>
-                  <Badge className="bg-yellow-500 text-white">Hot</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Gamepad2 className="h-5 w-5 text-green-400" />
-                    <span className="text-white font-medium">#League Worlds</span>
-                  </div>
-                  <Badge className="bg-green-500 text-white">Live</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Users className="h-5 w-5 text-blue-400" />
-                    <span className="text-white font-medium">#CS2 Training</span>
-                  </div>
-                  <Badge className="bg-blue-500 text-white">New</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Acciones Rápidas */}
-            <Card className="bg-gradient-to-br from-slate-800 to-slate-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700">
-                  <Users className="mr-2 h-4 w-4" />
-                  Encontrar Compañeros
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Mis Eventos
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                                className="bg-gra
