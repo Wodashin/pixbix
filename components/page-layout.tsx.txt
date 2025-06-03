@@ -1,17 +1,16 @@
+import type { ReactNode } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import type { ReactNode } from "react"
 
 interface PageLayoutProps {
   children: ReactNode
-  className?: string
 }
 
-export function PageLayout({ children, className = "" }: PageLayoutProps) {
+export function PageLayout({ children }: PageLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-900 text-white flex flex-col">
+    <div className="min-h-screen bg-slate-900 text-white">
       <Header />
-      <main className={`flex-1 ${className}`}>{children}</main>
+      <main>{children}</main>
       <Footer />
     </div>
   )
