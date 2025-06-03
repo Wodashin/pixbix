@@ -46,9 +46,7 @@ export function LatestNews() {
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Últimas Noticias</h2>
             <p className="text-xl text-slate-400">Mantente al día con lo último del mundo gaming</p>
           </div>
-          <Button variant="outline" className="border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white">
-            Ver Todas
-          </Button>
+          <Button className="bg-purple-600 hover:bg-purple-700 text-white">Ver Todas</Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
