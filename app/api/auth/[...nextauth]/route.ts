@@ -187,6 +187,10 @@ const handler = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   cookies: {
     sessionToken: {
@@ -196,6 +200,7 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        maxAge: 30 * 24 * 60 * 60, // 30 días
       },
     },
     callbackUrl: {
@@ -214,6 +219,18 @@ const handler = NextAuth({
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
+    },
+  },
+  // Añadir configuración de eventos para debug
+  events: {
+    async session({ session, token }) {
+      console.log("🔔 Session event:", session?.user?.email)
+    },
+    async signIn({ user, account }) {
+      console.log("🔔 SignIn event:", user?.email, account?.provider)
+    },
+    async signOut({ session, token }) {
+      console.log("🔔 SignOut event")
     },
   },
   debug: process.env.NODE_ENV === "development",
