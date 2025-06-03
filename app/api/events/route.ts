@@ -57,8 +57,51 @@ export async function GET(request: NextRequest) {
 // POST /api/events - Crear evento
 export async function POST(request: NextRequest) {
   try {
+    console.log("POST /api/events - Starting...")
+
+    // Método 1: Intentar con NextAuth
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    console.log("NextAuth session:", session?.user?.email || "undefined")
+
+    // Método 2: Intentar con Supabase
+    const supabase = createClient()
+    const {
+      data: { session: supabaseSession },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+    console.log("Supabase session:", supabaseSession?.user?.email || "undefined")
+
+    // Método 3: Intentar con headers de autorización
+    const authHeader = request.headers.get("authorization")
+    console.log("Auth header present:", !!authHeader)
+
+    let userEmail: string | null = null
+    let userId: string | null = null
+
+    // Priorizar NextAuth, luego Supabase
+    if (session?.user?.email) {
+      userEmail = session.user.email
+      console.log("Using NextAuth email:", userEmail)
+    } else if (supabaseSession?.user?.email) {
+      userEmail = supabaseSession.user.email
+      userId = supabaseSession.user.id
+      console.log("Using Supabase email:", userEmail)
+    } else if (authHeader) {
+      // Intentar autenticación con token
+      const token = authHeader.replace("Bearer ", "")
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser(token)
+      if (user?.email) {
+        userEmail = user.email
+        userId = user.id
+        console.log("Using token email:", userEmail)
+      }
+    }
+
+    if (!userEmail) {
+      console.log("No session found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -68,18 +111,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    const supabase = createClient()
+    // Obtener el ID del usuario si no lo tenemos
+    if (!userId) {
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", userEmail)
+        .single()
 
-    // Obtener el ID del usuario
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .single()
-
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      if (userError || !userData) {
+        console.error("User not found for email:", userEmail, userError)
+        return NextResponse.json({ error: "User not found" }, { status: 404 })
+      }
+      userId = userData.id
     }
+
+    console.log("Creating event for user:", userId)
 
     const { data: event, error } = await supabase
       .from("events")
@@ -91,7 +138,7 @@ export async function POST(request: NextRequest) {
         end_date,
         max_participants: max_participants || null,
         event_type: event_type || "tournament",
-        creator_id: userData.id,
+        creator_id: userId,
       })
       .select()
       .single()
@@ -101,6 +148,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log("Event created successfully:", event.id)
     return NextResponse.json(event)
   } catch (error) {
     console.error("Error in POST events:", error)
