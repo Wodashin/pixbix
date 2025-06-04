@@ -44,11 +44,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     console.log("Comments POST API - Starting...")
 
+    // Intentar obtener la sesión de NextAuth
     const session = await getServerSession(authOptions)
-    console.log("Comments POST API - Session:", session?.user?.email)
+    console.log("Comments POST API - NextAuth Session:", session?.user?.email)
 
-    if (!session?.user?.email) {
-      console.log("Comments POST API - No session found")
+    // Si no hay sesión de NextAuth, intentar con headers personalizados
+    let userEmail = session?.user?.email
+
+    if (!userEmail) {
+      // Intentar obtener email de headers personalizados
+      const customEmail = request.headers.get("x-user-email")
+      if (customEmail) {
+        userEmail = customEmail
+        console.log("Comments POST API - Using custom header email:", userEmail)
+      }
+    }
+
+    if (!userEmail) {
+      console.log("Comments POST API - No user email found in session or headers")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -66,7 +79,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", userEmail)
       .single()
 
     if (userError || !userData) {
