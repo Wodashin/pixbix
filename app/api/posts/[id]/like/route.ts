@@ -7,11 +7,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     console.log("Like API - Starting...")
 
+    // Intentar obtener la sesión de NextAuth
     const session = await getServerSession(authOptions)
-    console.log("Like API - Session:", session?.user?.email)
+    console.log("Like API - NextAuth Session:", session?.user?.email)
 
-    if (!session?.user?.email) {
-      console.log("Like API - No session found")
+    // Si no hay sesión de NextAuth, intentar con headers personalizados
+    let userEmail = session?.user?.email
+    let userId = null
+
+    if (!userEmail) {
+      // Intentar obtener email de headers personalizados
+      const customEmail = request.headers.get("x-user-email")
+      if (customEmail) {
+        userEmail = customEmail
+        console.log("Like API - Using custom header email:", userEmail)
+      }
+    }
+
+    if (!userEmail) {
+      console.log("Like API - No user email found in session or headers")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -22,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data: userData, error: userError } = await supabase
       .from("users")
       .select("id")
-      .eq("email", session.user.email)
+      .eq("email", userEmail)
       .single()
 
     if (userError || !userData) {
@@ -30,19 +44,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    console.log("Like API - User found:", userData.id)
+    userId = userData.id
+    console.log("Like API - User found:", userId)
 
     // Verificar si ya dio like
     const { data: existingLike } = await supabase
       .from("likes")
       .select("id")
       .eq("post_id", postId)
-      .eq("user_id", userData.id)
+      .eq("user_id", userId)
       .single()
 
     if (existingLike) {
       // Quitar like
-      const { error } = await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", userData.id)
+      const { error } = await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", userId)
 
       if (error) {
         console.error("Like API - Error removing like:", error)
@@ -55,7 +70,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       // Dar like
       const { error } = await supabase.from("likes").insert({
         post_id: postId,
-        user_id: userData.id,
+        user_id: userId,
       })
 
       if (error) {
