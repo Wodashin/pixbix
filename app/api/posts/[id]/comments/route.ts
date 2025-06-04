@@ -6,6 +6,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 // GET /api/posts/[id]/comments - Obtener comentarios de un post
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    console.log("Comments GET API - Starting...")
+
     const postId = params.id
     const supabase = createClient()
 
@@ -25,13 +27,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching comments:", error)
+      console.error("Comments GET API - Error fetching comments:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log("Comments GET API - Comments found:", comments?.length || 0)
     return NextResponse.json(comments)
   } catch (error) {
-    console.error("Error in GET comments:", error)
+    console.error("Comments GET API - General error:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
@@ -39,8 +42,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 // POST /api/posts/[id]/comments - Crear un comentario
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    console.log("Comments POST API - Starting...")
+
     const session = await getServerSession(authOptions)
+    console.log("Comments POST API - Session:", session?.user?.email)
+
     if (!session?.user?.email) {
+      console.log("Comments POST API - No session found")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -48,6 +56,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { content } = await request.json()
 
     if (!content || typeof content !== "string" || content.trim().length === 0) {
+      console.log("Comments POST API - Invalid content")
       return NextResponse.json({ error: "Content is required" }, { status: 400 })
     }
 
@@ -61,9 +70,11 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .single()
 
     if (userError || !userData) {
-      console.error("Error getting user:", userError)
+      console.error("Comments POST API - Error getting user:", userError)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
+
+    console.log("Comments POST API - User found:", userData.id)
 
     // Crear el comentario
     const { data: comment, error } = await supabase
@@ -71,7 +82,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .insert({
         post_id: postId,
         user_id: userData.id,
-        content,
+        content: content.trim(),
       })
       .select(`
         *,
@@ -86,16 +97,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       .single()
 
     if (error) {
-      console.error("Error creating comment:", error)
+      console.error("Comments POST API - Error creating comment:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Actualizar el contador de comentarios del post
-    await supabase.rpc("increment_comments_count", { post_id: postId })
+    console.log("Comments POST API - Comment created successfully")
+
+    // Actualizar el contador de comentarios del post (opcional)
+    try {
+      await supabase.rpc("increment_comments_count", { post_id: postId })
+    } catch (rpcError) {
+      console.log("Comments POST API - RPC function not found, skipping counter update")
+    }
 
     return NextResponse.json(comment)
   } catch (error) {
-    console.error("Error in POST comment:", error)
+    console.error("Comments POST API - General error:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
