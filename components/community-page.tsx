@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useSession } from "next-auth/react"
 import { GameSelectorModal } from "@/components/game-selector-modal"
 import { createClient } from "@/utils/supabase/client"
+import { AchievementSelectorModal } from "@/components/achievement-selector-modal"
 
 interface CommunityStats {
   activeUsers: number
@@ -57,6 +58,7 @@ export function CommunityPage() {
   })
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const supabase = createClient()
+  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false)
 
   // Fetch community stats
   useEffect(() => {
@@ -251,6 +253,10 @@ export function CommunityPage() {
     { label: "Eventos", value: stats.upcomingEvents.toString(), icon: Calendar },
   ]
 
+  const handleAchievementSelect = (achievement: any) => {
+    addTag(`logro-${achievement.name}`)
+  }
+
   return (
     <main className="container mx-auto px-4 py-8">
       {/* Header */}
@@ -358,10 +364,7 @@ export function CommunityPage() {
                         variant="outline"
                         size="sm"
                         className="border-slate-600 text-slate-300"
-                        onClick={() => {
-                          const achievement = prompt("¿Qué logro conseguiste?")
-                          if (achievement) addTag(`logro-${achievement}`)
-                        }}
+                        onClick={() => setIsAchievementModalOpen(true)}
                       >
                         <Trophy className="mr-2 h-4 w-4" />
                         Logro
@@ -557,6 +560,12 @@ export function CommunityPage() {
           </Card>
         </div>
       </div>
+      {/* Modal de selección de logros */}
+      <AchievementSelectorModal
+        isOpen={isAchievementModalOpen}
+        onClose={() => setIsAchievementModalOpen(false)}
+        onSelect={handleAchievementSelect}
+      />
     </main>
   )
 }
