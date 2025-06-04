@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { uploadImageToR2 } from "@/lib/cloudflare-r2-simple"
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,13 +25,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "La imagen no puede superar 10MB" }, { status: 400 })
     }
 
-    // Generar nombre único
+    // Por ahora solo devolvemos un placeholder
+    // En producción, usaríamos las variables de entorno para subir a R2
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(7)
     const fileName = `${timestamp}-${randomString}-${file.name}`
 
-    // Subir a R2
-    const imageUrl = await uploadImageToR2(file, fileName)
+    // URL de placeholder para desarrollo
+    const imageUrl = `/placeholder.svg?height=400&width=600&query=image`
 
     return NextResponse.json({
       success: true,
