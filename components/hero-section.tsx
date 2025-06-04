@@ -29,7 +29,7 @@ const featuredContent = [
   },
   {
     id: 3,
-    title: "Torneo Nobux Championship",
+    title: "Torneo Pixbae Championship",
     description: "Participa en nuestro torneo mensual con premios increíbles y reconocimiento en la comunidad.",
     image: "/placeholder.svg?height=600&width=1200",
     badge: "Evento Live",
