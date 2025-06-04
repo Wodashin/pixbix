@@ -13,7 +13,7 @@ export function Footer() {
             <Link href="/" className="flex items-center space-x-2">
               <Gamepad2 className="h-8 w-8 text-cyan-500" />
               <span className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-                Pixbae
+                PixBae
               </span>
             </Link>
             <p className="text-slate-400 text-sm leading-relaxed">
@@ -95,7 +95,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-slate-400 text-sm">© 2024 Pixbae. Todos los derechos reservados.</p>
+          <p className="text-slate-400 text-sm">© 2024 PixBae. Todos los derechos reservados.</p>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <Link href="/sitemap" className="text-slate-400 hover:text-purple-400 text-sm transition-colors">
               Mapa del Sitio
