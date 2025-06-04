@@ -5,7 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { supabaseAdmin } from "@/lib/supabase"
 import bcrypt from "bcryptjs"
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -63,6 +63,7 @@ const handler = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, account }) {
+      // Asegurarse de que el ID de usuario esté en el token
       if (user) {
         token.id = user.id
         token.provider = account?.provider || "credentials"
@@ -70,6 +71,7 @@ const handler = NextAuth({
       return token
     },
     async session({ session, token }) {
+      // Asegurarse de que el ID de usuario esté en la sesión
       if (token) {
         session.user.id = token.id as string
         session.user.provider = token.provider as string
@@ -189,9 +191,6 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 días
   },
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 días
-  },
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -200,7 +199,7 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 30 * 24 * 60 * 60, // 30 días
+        domain: process.env.NODE_ENV === "production" ? ".pixbae-gaming.com" : undefined, // Dominio principal
       },
     },
     callbackUrl: {
@@ -209,6 +208,7 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        domain: process.env.NODE_ENV === "production" ? ".pixbae-gaming.com" : undefined, // Dominio principal
       },
     },
     csrfToken: {
@@ -218,22 +218,13 @@ const handler = NextAuth({
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
+        domain: process.env.NODE_ENV === "production" ? ".pixbae-gaming.com" : undefined, // Dominio principal
       },
     },
   },
-  // Añadir configuración de eventos para debug
-  events: {
-    async session({ session, token }) {
-      console.log("🔔 Session event:", session?.user?.email)
-    },
-    async signIn({ user, account }) {
-      console.log("🔔 SignIn event:", user?.email, account?.provider)
-    },
-    async signOut({ session, token }) {
-      console.log("🔔 SignOut event")
-    },
-  },
   debug: process.env.NODE_ENV === "development",
-})
+}
+
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }
