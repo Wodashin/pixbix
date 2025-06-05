@@ -130,6 +130,7 @@ export function CommunityPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-user-email": session.user?.email || "",
         },
         body: JSON.stringify({
           content: newPost,
