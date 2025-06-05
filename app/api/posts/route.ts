@@ -2,6 +2,62 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { createClient } from "@/utils/supabase/server"
 
+export async function GET() {
+  try {
+    const supabase = createClient()
+
+    const { data: posts, error } = await supabase
+      .from("posts")
+      .select(`
+        *,
+        users!posts_user_id_fkey (
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `)
+      .order("created_at", { ascending: false })
+      .limit(20)
+
+    if (error) {
+      console.error("Error fetching posts:", error)
+      return NextResponse.json([])
+    }
+
+    // Para cada post, obtener conteos de likes y comentarios
+    const postsWithCounts = await Promise.all(
+      (posts || []).map(async (post) => {
+        // Contar likes
+        const { count: likesCount } = await supabase
+          .from("likes")
+          .select("*", { count: "exact", head: true })
+          .eq("post_id", post.id)
+
+        // Contar comentarios
+        const { count: commentsCount } = await supabase
+          .from("comments")
+          .select("*", { count: "exact", head: true })
+          .eq("post_id", post.id)
+
+        return {
+          ...post,
+          user: post.users,
+          likes_count: likesCount || 0,
+          comments_count: commentsCount || 0,
+          shares_count: 0,
+          views_count: Math.floor(Math.random() * 100) + 10,
+        }
+      }),
+    )
+
+    return NextResponse.json(postsWithCounts)
+  } catch (error) {
+    console.error("Error fetching posts:", error)
+    return NextResponse.json([])
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log("🚀 POST /api/posts - Starting...")
@@ -9,23 +65,44 @@ export async function POST(request: NextRequest) {
     let userId = null
     let userEmail = null
 
-    // Intentar con NextAuth getServerSession
-    const nextAuthSession = await getServerSession()
-    console.log("🟢 NextAuth server session:", nextAuthSession?.user?.email)
+    // MÉTODO 1: Obtener email del header personalizado
+    const headerEmail = request.headers.get("x-user-email")
+    console.log("📧 Header email:", headerEmail)
 
-    if (nextAuthSession?.user?.email) {
-      userEmail = nextAuthSession.user.email
+    if (headerEmail) {
+      userEmail = headerEmail
 
+      // Buscar usuario en Supabase por email
       const supabase = createClient()
-      const { data: user } = await supabase.from("users").select("id").eq("email", userEmail).single()
+      const { data: user, error } = await supabase.from("users").select("id").eq("email", userEmail).single()
 
-      if (user) {
+      if (user && !error) {
         userId = user.id
-        console.log("✅ User found via NextAuth server:", userId)
+        console.log("✅ User found via header email:", userId)
+      } else {
+        console.log("❌ User not found for email:", userEmail)
       }
     }
 
-    // Si no se encontró usuario, intentar con Supabase
+    // MÉTODO 2: Intentar con NextAuth como fallback
+    if (!userId) {
+      const nextAuthSession = await getServerSession()
+      console.log("🟢 NextAuth server session:", nextAuthSession?.user?.email)
+
+      if (nextAuthSession?.user?.email) {
+        userEmail = nextAuthSession.user.email
+
+        const supabase = createClient()
+        const { data: user } = await supabase.from("users").select("id").eq("email", userEmail).single()
+
+        if (user) {
+          userId = user.id
+          console.log("✅ User found via NextAuth server:", userId)
+        }
+      }
+    }
+
+    // MÉTODO 3: Supabase auth como último recurso
     if (!userId) {
       const supabase = createClient()
       const {
@@ -58,7 +135,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log("📝 Request body:", body)
 
-    const { content, game_id, achievement_id, image_url } = body
+    const { content, tags } = body
 
     if (!content?.trim()) {
       console.log("❌ No content provided")
@@ -73,9 +150,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         content: content.trim(),
-        game_id: game_id || null,
-        achievement_id: achievement_id || null,
-        image_url: image_url || null, // Agregar soporte para imágenes
+        tags: tags || [],
       })
       .select(`
         *,
