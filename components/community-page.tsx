@@ -259,7 +259,7 @@ export function CommunityPage() {
     <main className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Comunidad Pixbae</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Comunidad PixBae</h1>
         <p className="text-xl text-slate-400 max-w-2xl">
           Conecta con gamers de todo el mundo, comparte tus logros y descubre nuevas experiencias
         </p>
@@ -422,14 +422,14 @@ export function CommunityPage() {
                         {isPostOwner(post) && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-slate-400">
+                              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="bg-slate-800 border-slate-700">
                               <DropdownMenuItem
                                 onClick={() => handleDeletePost(post.id)}
-                                className="text-red-400 hover:text-red-300 hover:bg-slate-700"
+                                className="text-red-400 hover:text-red-300 hover:bg-slate-700 cursor-pointer"
                               >
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar
