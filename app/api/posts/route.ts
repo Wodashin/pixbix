@@ -135,7 +135,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     console.log("📝 Request body:", body)
 
-    const { content, tags } = body
+    // ✅ RESTAURAR SOPORTE COMPLETO PARA IMÁGENES Y OTROS CAMPOS
+    const { content, game_id, achievement_id, image_url, tags } = body
 
     if (!content?.trim()) {
       console.log("❌ No content provided")
@@ -143,6 +144,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("💾 Creating post for user:", userId)
+    console.log("🖼️ Image URL:", image_url)
+    console.log("🎮 Game ID:", game_id)
+    console.log("🏆 Achievement ID:", achievement_id)
 
     const supabase = createClient()
     const { data: post, error } = await supabase
@@ -150,6 +154,9 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         content: content.trim(),
+        game_id: game_id || null,
+        achievement_id: achievement_id || null,
+        image_url: image_url || null, // ✅ SOPORTE PARA IMÁGENES RESTAURADO
         tags: tags || [],
       })
       .select(`
