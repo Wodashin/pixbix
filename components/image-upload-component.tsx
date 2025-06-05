@@ -6,6 +6,7 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, Upload, X, Loader2 } from "lucide-react"
 import Image from "next/image"
+import { useSession } from "next-auth/react"
 
 interface ImageUploadComponentProps {
   onImageUpload: (imageUrl: string) => void
@@ -17,6 +18,7 @@ export function ImageUploadComponent({ onImageUpload, onImageRemove, currentImag
   const [isUploading, setIsUploading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { data: session } = useSession()
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -35,8 +37,15 @@ export function ImageUploadComponent({ onImageUpload, onImageRemove, currentImag
       const formData = new FormData()
       formData.append("file", file)
 
+      // Importante: Enviar el email del usuario en el header
+      const headers: Record<string, string> = {}
+      if (session?.user?.email) {
+        headers["x-user-email"] = session.user.email
+      }
+
       const response = await fetch("/api/upload/simple", {
         method: "POST",
+        headers,
         body: formData,
       })
 
@@ -45,6 +54,7 @@ export function ImageUploadComponent({ onImageUpload, onImageRemove, currentImag
         onImageUpload(url)
       } else {
         const errorData = await response.json()
+        console.error("Error uploading:", errorData)
         alert("Error al subir imagen: " + (errorData.error || "Error desconocido"))
       }
     } catch (error) {
@@ -101,38 +111,42 @@ export function ImageUploadComponent({ onImageUpload, onImageRemove, currentImag
   }
 
   return (
-    <div className="space-y-2">
+    <div>
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
 
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`
-          border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer
-          ${dragActive ? "border-purple-500 bg-purple-500/10" : "border-slate-600 hover:border-slate-500"}
-          ${isUploading ? "pointer-events-none opacity-50" : ""}
-        `}
+      <Button
+        variant="outline"
+        size="sm"
+        className="border-slate-600 text-slate-300 flex items-center"
         onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading}
       >
         {isUploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-            <p className="text-sm text-slate-400">Subiendo imagen...</p>
-          </div>
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Subiendo...
+          </>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="h-6 w-6 text-slate-400" />
-              <Upload className="h-6 w-6 text-slate-400" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-300">Haz clic o arrastra una imagen aquí</p>
-              <p className="text-xs text-slate-500">PNG, JPG, GIF hasta 5MB</p>
-            </div>
-          </div>
+          <>
+            <ImageIcon className="mr-2 h-4 w-4" />
+            Imagen
+          </>
         )}
-      </div>
+      </Button>
+
+      {dragActive && (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+        >
+          <div className="bg-slate-800 border-2 border-dashed border-purple-500 rounded-lg p-12 text-center">
+            <Upload className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+            <p className="text-xl font-medium text-white">Suelta la imagen aquí</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
