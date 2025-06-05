@@ -165,6 +165,9 @@ export function CommunityPage() {
     try {
       const response = await fetch(`/api/posts/${postId}/like`, {
         method: "POST",
+        headers: {
+          "x-user-email": session.user?.email || "",
+        },
       })
 
       if (response.ok) {
@@ -192,6 +195,9 @@ export function CommunityPage() {
     try {
       const response = await fetch(`/api/posts/${postId}`, {
         method: "DELETE",
+        headers: {
+          "x-user-email": session.user?.email || "",
+        },
       })
 
       if (response.ok) {
