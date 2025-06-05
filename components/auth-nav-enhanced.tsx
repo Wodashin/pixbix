@@ -67,7 +67,7 @@ export function AuthNavEnhanced() {
               <div className="flex items-center space-x-1 mt-1">
                 <Calendar className="w-3 h-3 text-slate-400" />
                 <span className="text-xs text-slate-400">
-                  {daysSinceJoined === 0 ? "Nuevo hoy" : `${daysSinceJoined} días en Nobux`}
+                  {daysSinceJoined === 0 ? "Nuevo hoy" : `${daysSinceJoined} días en PixBae`}
                 </span>
               </div>
             </div>
