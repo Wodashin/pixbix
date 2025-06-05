@@ -35,12 +35,15 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
     )
   }
 
-  if (!session) {
+  if (!session?.user?.email) {
     return (
       <Card className={className}>
         <CardContent className="p-4">
           <div className="text-center text-red-600">
             <p>Debes iniciar sesión para subir imágenes</p>
+            <Button className="mt-2" onClick={() => (window.location.href = "/login")}>
+              Iniciar Sesión
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -61,16 +64,19 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
       reader.onload = (e) => setPreview(e.target?.result as string)
       reader.readAsDataURL(file)
 
-      // Subir archivo
+      // Subir archivo con header personalizado
       const formData = new FormData()
       formData.append("file", file)
 
       console.log("📤 Uploading file:", file.name)
-      console.log("👤 Current session:", session?.user?.email)
+      console.log("👤 Current session:", session.user.email)
 
       const response = await fetch("/api/upload/simple", {
         method: "POST",
         body: formData,
+        headers: {
+          "x-user-email": session.user.email, // Enviar email en header personalizado
+        },
         credentials: "include",
       })
 
@@ -116,7 +122,7 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
             <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
             <p className="text-gray-600">Haz clic para subir imagen</p>
             <p className="text-sm text-gray-400">JPG, PNG, WebP (máx. 10MB)</p>
-            <p className="text-xs text-blue-600 mt-1">Sesión: {session.user?.email}</p>
+            <p className="text-xs text-green-600 mt-1">✅ Sesión activa: {session.user.email}</p>
           </div>
         ) : (
           <div className="relative">
