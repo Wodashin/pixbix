@@ -7,16 +7,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   try {
     console.log("Like API - Starting...")
 
-    // Intentar obtener la sesión de NextAuth
+    // Método 1: Intentar obtener la sesión de NextAuth
     const session = await getServerSession(authOptions)
     console.log("Like API - NextAuth Session:", session?.user?.email)
 
-    // Si no hay sesión de NextAuth, intentar con headers personalizados
+    // Método 2: Si no hay sesión de NextAuth, intentar con headers personalizados
     let userEmail = session?.user?.email
-    let userId = null
 
     if (!userEmail) {
-      // Intentar obtener email de headers personalizados
       const customEmail = request.headers.get("x-user-email")
       if (customEmail) {
         userEmail = customEmail
@@ -24,10 +22,26 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       }
     }
 
+    // Método 3: Intentar obtener email desde Supabase directamente
     if (!userEmail) {
-      console.log("Like API - No user email found in session or headers")
+      const supabase = createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
+      if (user?.email) {
+        userEmail = user.email
+        console.log("Like API - Using Supabase user email:", userEmail)
+      }
+    }
+
+    if (!userEmail) {
+      console.log("Like API - No user email found with any method")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
+
+    console.log("Like API - Final auth result:")
+    console.log("- User Email:", userEmail)
 
     const supabase = createClient()
     const postId = params.id
@@ -44,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    userId = userData.id
+    const userId = userData.id
     console.log("Like API - User found:", userId)
 
     // Verificar si ya dio like
