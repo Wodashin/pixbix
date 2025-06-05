@@ -16,7 +16,6 @@ import {
   Share2,
   Eye,
   Plus,
-  ImageIcon,
   Gamepad2,
   Trophy,
   X,
@@ -32,6 +31,7 @@ import { createClient } from "@/utils/supabase/client"
 import { AchievementSelectorModal } from "@/components/achievement-selector-modal"
 import { CommentSection } from "@/components/comment-section"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ImageUploadComponent } from "@/components/image-upload-component"
 
 interface CommunityStats {
   activeUsers: number
@@ -64,6 +64,7 @@ export function CommunityPage() {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const supabase = createClient()
   const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false)
+  const [postImage, setPostImage] = useState<string>("")
 
   // Fetch community stats
   useEffect(() => {
@@ -135,6 +136,7 @@ export function CommunityPage() {
         body: JSON.stringify({
           content: newPost,
           tags: tags.length > 0 ? tags : undefined,
+          image_url: postImage || null,
         }),
       })
 
@@ -144,6 +146,7 @@ export function CommunityPage() {
         setNewPost("")
         setSelectedGame("")
         setSelectedTags([])
+        setPostImage("")
       } else {
         const errorData = await response.json()
         alert("Error al crear el post: " + (errorData.error || "Error desconocido"))
@@ -318,6 +321,15 @@ export function CommunityPage() {
                     className="bg-slate-700 border-slate-600 text-slate-100 min-h-[100px]"
                   />
 
+                  {/* Image Upload */}
+                  {postImage ? (
+                    <ImageUploadComponent
+                      currentImage={postImage}
+                      onImageUpload={setPostImage}
+                      onImageRemove={() => setPostImage("")}
+                    />
+                  ) : null}
+
                   {/* Game Selection */}
                   {selectedGame && (
                     <div className="flex items-center space-x-2">
@@ -346,17 +358,9 @@ export function CommunityPage() {
 
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-slate-600 text-slate-300"
-                        onClick={() => {
-                          alert("Funcionalidad de imagen próximamente")
-                        }}
-                      >
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        Imagen
-                      </Button>
+                      {!postImage && (
+                        <ImageUploadComponent onImageUpload={setPostImage} onImageRemove={() => setPostImage("")} />
+                      )}
 
                       <GameSelectorModal onGameSelect={setSelectedGame}>
                         <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
