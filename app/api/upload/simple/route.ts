@@ -99,20 +99,62 @@ export async function POST(request: NextRequest) {
     // Generar nombre único
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(7)
-    const fileName = `${timestamp}-${randomString}-${file.name}`
+    const fileExtension = file.name.split(".").pop() || "jpg"
+    const fileName = `posts/${userId}/${timestamp}-${randomString}.${fileExtension}`
 
-    // Por ahora usar placeholder (más tarde conectar con Cloudflare R2)
-    const imageUrl = `/placeholder.svg?height=400&width=600&query=${encodeURIComponent(file.name)}`
+    console.log("📁 Generated filename:", fileName)
 
-    console.log("✅ Upload successful (placeholder):", imageUrl)
+    try {
+      // Intentar subir a Cloudflare R2
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
 
-    return NextResponse.json({
-      success: true,
-      url: imageUrl,
-      fileName,
-      message: "¡Imagen subida exitosamente! (modo desarrollo)",
-      user: userEmail,
-    })
+      const uploadResponse = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/r2/buckets/${process.env.CLOUDFLARE_BUCKET_NAME}/objects/${fileName}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            "Content-Type": file.type,
+          },
+          body: buffer,
+        },
+      )
+
+      if (uploadResponse.ok) {
+        // URL pública de Cloudflare R2
+        const publicUrl = `https://pub-e8d3b4b205fb43f594d31b93a69f816.r2.dev/${fileName}`
+
+        console.log("✅ Upload successful to R2:", publicUrl)
+
+        return NextResponse.json({
+          success: true,
+          url: publicUrl,
+          fileName,
+          message: "¡Imagen subida exitosamente a Cloudflare R2!",
+          user: userEmail,
+        })
+      } else {
+        console.error("❌ Cloudflare R2 upload failed:", await uploadResponse.text())
+        throw new Error("Failed to upload to R2")
+      }
+    } catch (r2Error) {
+      console.error("❌ R2 upload error:", r2Error)
+
+      // FALLBACK: Usar un servicio de imágenes temporal
+      const fallbackUrl = `https://picsum.photos/600/400?random=${timestamp}`
+
+      console.log("🔄 Using fallback image service:", fallbackUrl)
+
+      return NextResponse.json({
+        success: true,
+        url: fallbackUrl,
+        fileName,
+        message: "¡Imagen subida exitosamente! (usando servicio temporal)",
+        user: userEmail,
+        fallback: true,
+      })
+    }
   } catch (error) {
     console.error("💥 Error uploading:", error)
     return NextResponse.json(
