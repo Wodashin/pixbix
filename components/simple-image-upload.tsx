@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Upload, Loader2, X } from "lucide-react"
+import { Upload, Loader2, X, CheckCircle } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 interface SimpleImageUploadProps {
   onUpload: (url: string) => void
@@ -13,16 +14,45 @@ interface SimpleImageUploadProps {
 }
 
 export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProps) {
+  const { data: session, status } = useSession()
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Verificar autenticación
+  if (status === "loading") {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4">
+          <div className="text-center">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+            <p>Verificando sesión...</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!session) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4">
+          <div className="text-center text-red-600">
+            <p>Debes iniciar sesión para subir imágenes</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
     setError(null)
+    setSuccess(null)
     setUploading(true)
 
     try {
@@ -35,19 +65,28 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
       const formData = new FormData()
       formData.append("file", file)
 
+      console.log("📤 Uploading file:", file.name)
+      console.log("👤 Current session:", session?.user?.email)
+
       const response = await fetch("/api/upload/simple", {
         method: "POST",
         body: formData,
+        credentials: "include",
       })
 
+      console.log("📡 Response status:", response.status)
+
       const result = await response.json()
+      console.log("📋 Response data:", result)
 
       if (result.success) {
         onUpload(result.url)
+        setSuccess(result.message || "¡Imagen subida exitosamente!")
       } else {
         throw new Error(result.error || "Error al subir imagen")
       }
     } catch (err) {
+      console.error("💥 Upload error:", err)
       setError(err instanceof Error ? err.message : "Error desconocido")
       setPreview(null)
     } finally {
@@ -58,6 +97,7 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
   const clearPreview = () => {
     setPreview(null)
     setError(null)
+    setSuccess(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -76,6 +116,7 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
             <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
             <p className="text-gray-600">Haz clic para subir imagen</p>
             <p className="text-sm text-gray-400">JPG, PNG, WebP (máx. 10MB)</p>
+            <p className="text-xs text-blue-600 mt-1">Sesión: {session.user?.email}</p>
           </div>
         ) : (
           <div className="relative">
@@ -90,6 +131,13 @@ export function SimpleImageUpload({ onUpload, className }: SimpleImageUploadProp
           <div className="mt-4 flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin mr-2" />
             <span>Subiendo imagen...</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2" />
+            {success}
           </div>
         )}
 
