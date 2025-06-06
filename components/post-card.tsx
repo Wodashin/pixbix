@@ -156,7 +156,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
       <div className="space-y-3">
         <p className="text-white leading-relaxed">{post.content}</p>
 
-        {/* Imagen del post - ARREGLADA */}
+        {/* Imagen del post - MEJORADA */}
         {post.image_url && !imageError && (
           <div className="relative w-full rounded-lg overflow-hidden bg-slate-700">
             <Image
@@ -164,10 +164,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
               alt="Imagen del post"
               width={600}
               height={400}
-              className="w-full h-auto object-cover"
-              onError={() => setImageError(true)}
-              unoptimized // Importante para URLs externas
+              className="w-full h-64 object-cover rounded-lg"
+              onError={() => {
+                console.error("❌ Error cargando imagen:", post.image_url)
+                setImageError(true)
+              }}
+              onLoad={() => console.log("✅ Imagen cargada:", post.image_url)}
+              unoptimized
+              priority={false}
             />
+          </div>
+        )}
+
+        {/* Mostrar error de imagen en desarrollo */}
+        {imageError && process.env.NODE_ENV === "development" && (
+          <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300 text-sm">
+            <strong>Error cargando imagen:</strong> {post.image_url}
           </div>
         )}
 
