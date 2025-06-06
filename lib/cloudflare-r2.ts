@@ -1,9 +1,11 @@
-// La URL base pública de tu bucket de R2 desde variable de entorno
+// 🔒 USAR SOLO VARIABLE DE ENTORNO - SIN HARDCODING
 const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL
 
-// Verificar que la variable de entorno está definida
+// 🚨 Verificar que la variable esté configurada
 if (!R2_PUBLIC_URL) {
-  console.error("⚠️ NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL no está definida en las variables de entorno")
+  console.error("🚨 CONFIGURACIÓN REQUERIDA:")
+  console.error("   Agrega NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL a tu .env.local")
+  console.error("   Ejemplo: NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL=https://tu-dominio-r2.com")
 }
 
 /**
@@ -13,8 +15,8 @@ if (!R2_PUBLIC_URL) {
  */
 export function getImageUrl(fileName: string): string {
   if (!R2_PUBLIC_URL) {
-    console.warn("⚠️ R2_PUBLIC_URL no está definida, usando URL de placeholder")
-    return `https://via.placeholder.com/800x600?text=R2+URL+Missing`
+    console.error("❌ R2_PUBLIC_URL no configurada")
+    return `/placeholder.svg?height=400&width=600&text=${encodeURIComponent("Configurar R2")}`
   }
   return `${R2_PUBLIC_URL}/${fileName}`
 }
@@ -52,4 +54,13 @@ export function generateFileName(userId: string, originalFileName: string): stri
   const randomString = Math.random().toString(36).substring(7)
   const fileExtension = originalFileName.split(".").pop() || "jpg"
   return `posts/${userId}/${timestamp}-${randomString}.${fileExtension}`
+}
+
+// 🔍 Función de debug para verificar configuración
+export function debugR2Config() {
+  console.log("🔍 Configuración R2:")
+  console.log("   Variable de entorno:", R2_PUBLIC_URL ? "✅ Configurada" : "❌ No configurada")
+  if (!R2_PUBLIC_URL) {
+    console.log("⚠️ IMPORTANTE: Las imágenes no funcionarán hasta que configures la variable de entorno")
+  }
 }
