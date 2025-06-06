@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { createClient } from "@/utils/supabase/server"
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
+import { getImageUrl, generateFileName } from "@/lib/cloudflare-r2"
+import https from "https"
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,11 +51,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Archivo inválido" }, { status: 400 })
     }
 
-    // Generar nombre único
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(7)
-    const fileExtension = file.name.split(".").pop() || "jpg"
-    const fileName = `posts/${userId}/${timestamp}-${randomString}.${fileExtension}`
+    // 🎯 USAR FUNCIÓN CENTRALIZADA
+    const fileName = generateFileName(userId, file.name)
+    console.log("📁 Generated filename:", fileName)
 
     try {
       const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
@@ -71,7 +71,15 @@ export async function POST(request: NextRequest) {
         throw new Error("Missing Cloudflare R2 configuration")
       }
 
-      // 🔧 CONFIGURACIÓN SSL MEJORADA PARA R2
+      // 🔧 CONFIGURACIÓN SSL MEJORADA
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false,
+        secureProtocol: "TLSv1_2_method",
+        ciphers: "ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS",
+        honorCipherOrder: true,
+        secureOptions: require("constants").SSL_OP_NO_SSLv2 | require("constants").SSL_OP_NO_SSLv3,
+      })
+
       const s3Client = new S3Client({
         region: "auto",
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -79,17 +87,15 @@ export async function POST(request: NextRequest) {
           accessKeyId: accessKeyId,
           secretAccessKey: secretAccessKey,
         },
-        // 🛡️ Configuración SSL más robusta
-        
-        // 🔄 Configuración de reintentos
+        requestHandler: {
+          httpsAgent,
+        },
         maxAttempts: 3,
         retryMode: "adaptive",
-        // 🕐 Timeouts más largos
         requestTimeout: 30000,
         connectionTimeout: 10000,
       })
 
-      console.log("📁 Generated filename:", fileName)
       console.log("🔗 Using endpoint:", `https://${accountId}.r2.cloudflarestorage.com`)
 
       // Convertir archivo a buffer
@@ -98,44 +104,42 @@ export async function POST(request: NextRequest) {
 
       console.log("📤 Starting upload to R2...")
 
-      // Subir archivo con configuración mejorada
+      // Subir archivo
       const uploadCommand = new PutObjectCommand({
         Bucket: bucketName,
         Key: fileName,
         Body: buffer,
         ContentType: file.type,
-        // 🔧 Headers adicionales para R2
+        CacheControl: "public, max-age=31536000",
         Metadata: {
           "uploaded-by": "pixbae-app",
-          "upload-timestamp": timestamp.toString(),
+          "upload-timestamp": Date.now().toString(),
+          "user-id": userId,
+          "original-name": file.name,
         },
       })
 
       const result = await s3Client.send(uploadCommand)
       console.log("✅ R2 upload result:", result)
 
-      // URLs públicas
-      const publicDevUrl = `https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev/${fileName}`
-      const customDomainUrl = `https://cdn.pixbae-gaming.com/${fileName}`
+      // 🎯 USAR FUNCIÓN CENTRALIZADA PARA URL
+      const publicUrl = getImageUrl(fileName)
 
       console.log("✅ Upload successful to R2:")
-      console.log("  - Public Dev URL:", publicDevUrl)
-      console.log("  - Custom Domain:", customDomainUrl)
+      console.log("  - File name:", fileName)
+      console.log("  - Public URL:", publicUrl)
 
       return NextResponse.json({
         success: true,
-        url: publicDevUrl, // Usar Public Dev URL como principal
+        url: publicUrl,
         fileName,
         message: "¡Imagen subida exitosamente a Cloudflare R2!",
         user: userEmail,
-        urls: {
-          publicDev: publicDevUrl,
-          custom: customDomainUrl,
-        },
         uploadDetails: {
           size: file.size,
           type: file.type,
-          timestamp,
+          originalName: file.name,
+          r2Response: result,
         },
       })
     } catch (r2Error) {
@@ -143,22 +147,27 @@ export async function POST(request: NextRequest) {
         error: r2Error,
         message: r2Error instanceof Error ? r2Error.message : "Unknown error",
         stack: r2Error instanceof Error ? r2Error.stack : undefined,
+        name: r2Error instanceof Error ? r2Error.name : undefined,
       })
 
-      // 🔄 FALLBACK MEJORADO - Usar servicio temporal confiable
+      // 🔄 FALLBACK con función centralizada
+      const fallbackFileName = generateFileName(userId, `fallback-${file.name}`)
       const timestamp = Date.now()
-      const fallbackUrl = `https://picsum.photos/600/400?random=${timestamp}`
 
-      console.log("🔄 Using reliable fallback service:", fallbackUrl)
+      console.log("🔄 Using placeholder fallback")
 
       return NextResponse.json({
         success: true,
-        url: fallbackUrl,
-        fileName,
-        message: "Error en R2, usando servicio temporal de imágenes",
+        url: `https://via.placeholder.com/600x400/1e293b/ffffff?text=R2+Error+${timestamp}`,
+        fileName: fallbackFileName,
+        message: "Error en R2, usando placeholder temporal",
         user: userEmail,
         fallback: true,
         error: r2Error instanceof Error ? r2Error.message : "R2 connection failed",
+        debug: {
+          errorType: r2Error instanceof Error ? r2Error.constructor.name : "Unknown",
+          errorCode: (r2Error as any)?.code || "No code",
+        },
       })
     }
   } catch (error) {
