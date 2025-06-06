@@ -1,5 +1,10 @@
-// La URL base pública de tu bucket de R2.
-const R2_PUBLIC_URL = "https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev"
+// La URL base pública de tu bucket de R2 desde variable de entorno
+const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL
+
+// Verificar que la variable de entorno está definida
+if (!R2_PUBLIC_URL) {
+  console.error("⚠️ NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL no está definida en las variables de entorno")
+}
 
 /**
  * Construye la URL completa para un archivo en R2.
@@ -7,6 +12,10 @@ const R2_PUBLIC_URL = "https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev"
  * @returns La URL pública completa de la imagen.
  */
 export function getImageUrl(fileName: string): string {
+  if (!R2_PUBLIC_URL) {
+    console.warn("⚠️ R2_PUBLIC_URL no está definida, usando URL de placeholder")
+    return `https://via.placeholder.com/800x600?text=R2+URL+Missing`
+  }
   return `${R2_PUBLIC_URL}/${fileName}`
 }
 
@@ -16,7 +25,7 @@ export function getImageUrl(fileName: string): string {
  * @returns El nombre del archivo o null si no es una URL válida
  */
 export function getFileNameFromUrl(url: string): string | null {
-  if (!url.startsWith(R2_PUBLIC_URL)) {
+  if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) {
     return null
   }
   return url.replace(`${R2_PUBLIC_URL}/`, "")
@@ -28,6 +37,7 @@ export function getFileNameFromUrl(url: string): string | null {
  * @returns true si es una URL de nuestro R2
  */
 export function isR2Url(url: string): boolean {
+  if (!R2_PUBLIC_URL) return false
   return url.startsWith(R2_PUBLIC_URL)
 }
 
