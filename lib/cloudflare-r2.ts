@@ -1,5 +1,5 @@
 // La URL base pública de tu bucket de R2.
-const R2_PUBLIC_URL = "https://pub-e8d3b4b205fb43f594d31b93a69f816.r2.dev"
+const R2_PUBLIC_URL = "https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev"
 
 /**
  * Construye la URL completa para un archivo en R2.
