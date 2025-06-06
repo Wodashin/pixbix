@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ImageIcon, Upload, X, Loader2 } from "lucide-react"
 import Image from "next/image"
@@ -10,15 +10,23 @@ import { useSession } from "next-auth/react"
 interface SimpleImageUploadProps {
   onUpload: (imageUrl: string) => void
   currentImage?: string
+  onImageRemove?: () => void // ← Agregar esta prop
 }
 
-export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadProps) {
+export function SimpleImageUpload({ onUpload, currentImage, onImageRemove }: SimpleImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(currentImage || null)
   const [dragActive, setDragActive] = useState(false)
   const [imageError, setImageError] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { data: session } = useSession()
+
+  // 🔄 Sincronizar con currentImage del padre
+  useEffect(() => {
+    console.log("📊 SimpleImageUpload - currentImage changed:", currentImage)
+    setUploadedImageUrl(currentImage || null)
+    setImageError(false)
+  }, [currentImage])
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -39,6 +47,7 @@ export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadP
       formData.append("file", file)
 
       console.log("📤 Uploading image to R2...")
+      console.log("👤 User email:", session?.user?.email)
 
       const response = await fetch("/api/upload/simple", {
         method: "POST",
@@ -54,7 +63,7 @@ export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadP
       if (result.success && result.url) {
         console.log("✅ Image uploaded successfully:", result.url)
         setUploadedImageUrl(result.url)
-        onUpload(result.url) // Llamar la función del padre
+        onUpload(result.url) // Notificar al padre
       } else {
         console.error("❌ Upload failed:", result.error)
         alert("Error al subir imagen: " + (result.error || "Error desconocido"))
@@ -95,9 +104,14 @@ export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadP
   }
 
   const handleRemoveImage = () => {
+    console.log("🗑️ Removing image...")
     setUploadedImageUrl(null)
     setImageError(false)
-    onUpload("") // Notificar al padre que se removió la imagen
+
+    // Llamar ambas funciones de callback
+    onUpload("") // Notificar al padre que se removió
+    onImageRemove?.() // Llamar callback específico si existe
+
     // Limpiar el input file
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
@@ -105,22 +119,25 @@ export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadP
   }
 
   // 🖼️ MOSTRAR IMAGEN SUBIDA
-  if ((uploadedImageUrl || currentImage) && !imageError) {
-    const imageUrl = uploadedImageUrl || currentImage
+  const imageToShow = uploadedImageUrl || currentImage
+  if (imageToShow && !imageError) {
+    console.log("🖼️ Showing image:", imageToShow)
+
     return (
       <div className="relative w-full">
         <div className="relative w-full h-48 rounded-lg overflow-hidden bg-slate-700 border border-slate-600">
           <Image
-            src={imageUrl || "/placeholder.svg"}
+            src={imageToShow || "/placeholder.svg"}
             alt="Imagen subida"
             fill
             className="object-cover"
-            onError={() => {
-              console.error("❌ Error loading image:", imageUrl)
+            onError={(e) => {
+              console.error("❌ Error loading image:", imageToShow)
+              console.error("❌ Image error event:", e)
               setImageError(true)
             }}
             onLoad={() => {
-              console.log("✅ Image loaded successfully:", imageUrl)
+              console.log("✅ Image loaded successfully:", imageToShow)
             }}
             unoptimized // Importante para URLs externas de R2
           />
@@ -133,7 +150,25 @@ export function SimpleImageUpload({ onUpload, currentImage }: SimpleImageUploadP
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <p className="text-xs text-slate-400 mt-1 truncate">{imageUrl}</p>
+        <p className="text-xs text-slate-400 mt-1 truncate" title={imageToShow}>
+          {imageToShow}
+        </p>
+      </div>
+    )
+  }
+
+  // ❌ MOSTRAR ERROR DE IMAGEN
+  if (imageError && imageToShow) {
+    return (
+      <div className="relative w-full">
+        <div className="w-full h-48 rounded-lg border border-red-500 bg-red-900/20 flex flex-col items-center justify-center">
+          <X className="h-8 w-8 text-red-400 mb-2" />
+          <p className="text-sm text-red-400 text-center">Error al cargar imagen</p>
+          <p className="text-xs text-red-300 text-center mt-1 px-4 truncate">{imageToShow}</p>
+          <Button variant="outline" size="sm" onClick={handleRemoveImage} className="mt-3">
+            Remover imagen
+          </Button>
+        </div>
       </div>
     )
   }
