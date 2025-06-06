@@ -126,13 +126,12 @@ export async function POST(request: NextRequest) {
         Key: fileName,
         Body: buffer,
         ContentType: file.type,
-        ACL: "public-read",
       })
 
       await s3Client.send(uploadCommand)
 
-      // URL pública de Cloudflare R2
-      const publicUrl = `https://pub-e8d3b4b205fb43f594d31b93a69f816.r2.dev/${fileName}`
+      // 🎯 USAR TU DOMINIO PERSONALIZADO
+      const publicUrl = `https://cdn.pixbae-gaming.com/${fileName}`
 
       console.log("✅ Upload successful to R2:", publicUrl)
 
@@ -142,30 +141,25 @@ export async function POST(request: NextRequest) {
         fileName,
         message: "¡Imagen subida exitosamente a Cloudflare R2!",
         user: userEmail,
+        customDomain: true,
       })
     } catch (r2Error) {
       console.error("❌ R2 upload error:", r2Error)
 
-      // FALLBACK MEJORADO: Usar Vercel Blob como alternativa
-      try {
-        // Por ahora, usar un placeholder más realista
-        const timestamp = Date.now()
-        const placeholderUrl = `https://via.placeholder.com/600x400/1e293b/ffffff?text=Imagen+Subida+${timestamp}`
+      // FALLBACK MEJORADO
+      const timestamp = Date.now()
+      const placeholderUrl = `https://via.placeholder.com/600x400/1e293b/ffffff?text=Imagen+${timestamp}`
 
-        console.log("🔄 Using improved placeholder:", placeholderUrl)
+      console.log("🔄 Using placeholder fallback:", placeholderUrl)
 
-        return NextResponse.json({
-          success: true,
-          url: placeholderUrl,
-          fileName,
-          message: "¡Imagen procesada! (usando placeholder temporal)",
-          user: userEmail,
-          fallback: true,
-        })
-      } catch (fallbackError) {
-        console.error("❌ Fallback error:", fallbackError)
-        throw new Error("All upload methods failed")
-      }
+      return NextResponse.json({
+        success: true,
+        url: placeholderUrl,
+        fileName,
+        message: "¡Imagen procesada! (usando placeholder temporal)",
+        user: userEmail,
+        fallback: true,
+      })
     }
   } catch (error) {
     console.error("💥 Error uploading:", error)
