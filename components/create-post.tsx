@@ -76,7 +76,11 @@ export function CreatePost({ games, achievements }: CreatePostProps) {
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Imagen (opcional)</label>
-        <SimpleImageUpload onUpload={setImageUrl} />
+       <SimpleImageUpload 
+          onUpload={setImageUrl} 
+          currentImage={imageUrl} 
+          onImageRemove={() => setImageUrl("")} 
+/>
       </div>
 
       <div>
