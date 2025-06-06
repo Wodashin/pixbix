@@ -80,11 +80,7 @@ export async function POST(request: NextRequest) {
           secretAccessKey: secretAccessKey,
         },
         // 🛡️ Configuración SSL más robusta
-        requestHandler: {
-          httpsAgent: {
-            rejectUnauthorized: false, // Para desarrollo
-          },
-        },
+        
         // 🔄 Configuración de reintentos
         maxAttempts: 3,
         retryMode: "adaptive",
