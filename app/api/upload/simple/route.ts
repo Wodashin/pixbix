@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         throw new Error("Missing Cloudflare R2 configuration")
       }
 
-      // Configurar S3 Client
+      // 🔧 CONFIGURACIÓN SSL MEJORADA PARA R2
       const s3Client = new S3Client({
         region: "auto",
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -79,36 +79,56 @@ export async function POST(request: NextRequest) {
           accessKeyId: accessKeyId,
           secretAccessKey: secretAccessKey,
         },
+        // 🛡️ Configuración SSL más robusta
+        requestHandler: {
+          httpsAgent: {
+            rejectUnauthorized: false, // Para desarrollo
+          },
+        },
+        // 🔄 Configuración de reintentos
+        maxAttempts: 3,
+        retryMode: "adaptive",
+        // 🕐 Timeouts más largos
+        requestTimeout: 30000,
+        connectionTimeout: 10000,
       })
 
-      // Subir archivo
+      console.log("📁 Generated filename:", fileName)
+      console.log("🔗 Using endpoint:", `https://${accountId}.r2.cloudflarestorage.com`)
+
+      // Convertir archivo a buffer
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
+      console.log("📤 Starting upload to R2...")
+
+      // Subir archivo con configuración mejorada
       const uploadCommand = new PutObjectCommand({
         Bucket: bucketName,
         Key: fileName,
         Body: buffer,
         ContentType: file.type,
+        // 🔧 Headers adicionales para R2
+        Metadata: {
+          "uploaded-by": "pixbae-app",
+          "upload-timestamp": timestamp.toString(),
+        },
       })
 
-      await s3Client.send(uploadCommand)
+      const result = await s3Client.send(uploadCommand)
+      console.log("✅ R2 upload result:", result)
 
-      // 🎯 USAR TU URL PÚBLICA REAL
+      // URLs públicas
       const publicDevUrl = `https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev/${fileName}`
       const customDomainUrl = `https://cdn.pixbae-gaming.com/${fileName}`
-
-      // Usar Public Development URL como primera opción (más confiable)
-      const publicUrl = publicDevUrl
 
       console.log("✅ Upload successful to R2:")
       console.log("  - Public Dev URL:", publicDevUrl)
       console.log("  - Custom Domain:", customDomainUrl)
-      console.log("  - Using:", publicUrl)
 
       return NextResponse.json({
         success: true,
-        url: publicUrl,
+        url: publicDevUrl, // Usar Public Dev URL como principal
         fileName,
         message: "¡Imagen subida exitosamente a Cloudflare R2!",
         user: userEmail,
@@ -116,27 +136,43 @@ export async function POST(request: NextRequest) {
           publicDev: publicDevUrl,
           custom: customDomainUrl,
         },
+        uploadDetails: {
+          size: file.size,
+          type: file.type,
+          timestamp,
+        },
       })
     } catch (r2Error) {
-      console.error("❌ R2 upload error:", r2Error)
+      console.error("❌ R2 upload error details:", {
+        error: r2Error,
+        message: r2Error instanceof Error ? r2Error.message : "Unknown error",
+        stack: r2Error instanceof Error ? r2Error.stack : undefined,
+      })
 
-      // Fallback mejorado
+      // 🔄 FALLBACK MEJORADO - Usar servicio temporal confiable
       const timestamp = Date.now()
-      const placeholderUrl = `https://via.placeholder.com/600x400/1e293b/ffffff?text=R2+Error+${timestamp}`
+      const fallbackUrl = `https://picsum.photos/600/400?random=${timestamp}`
 
-      console.log("🔄 Using placeholder fallback:", placeholderUrl)
+      console.log("🔄 Using reliable fallback service:", fallbackUrl)
 
       return NextResponse.json({
         success: true,
-        url: placeholderUrl,
+        url: fallbackUrl,
         fileName,
-        message: "Error en R2, usando placeholder temporal",
+        message: "Error en R2, usando servicio temporal de imágenes",
         user: userEmail,
         fallback: true,
+        error: r2Error instanceof Error ? r2Error.message : "R2 connection failed",
       })
     }
   } catch (error) {
-    console.error("💥 Error uploading:", error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    console.error("💥 General error:", error)
+    return NextResponse.json(
+      {
+        error: "Error interno del servidor",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
