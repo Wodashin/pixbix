@@ -10,36 +10,27 @@ export async function POST(request: NextRequest) {
     let userId = null
     let userEmail = null
 
-    // MÉTODO 1: Obtener email del header personalizado
+    // Autenticación
     const headerEmail = request.headers.get("x-user-email")
     console.log("📧 Header email:", headerEmail)
 
     if (headerEmail) {
       userEmail = headerEmail
-
-      // Buscar usuario en Supabase por email
       const supabase = createClient()
       const { data: user, error } = await supabase.from("users").select("id").eq("email", userEmail).single()
 
       if (user && !error) {
         userId = user.id
         console.log("✅ User found via header email:", userId)
-      } else {
-        console.log("❌ User not found for email:", userEmail)
       }
     }
 
-    // MÉTODO 2: Intentar con NextAuth como fallback
     if (!userId) {
       const nextAuthSession = await getServerSession()
-      console.log("🟢 NextAuth server session:", nextAuthSession?.user?.email)
-
       if (nextAuthSession?.user?.email) {
         userEmail = nextAuthSession.user.email
-
         const supabase = createClient()
         const { data: user } = await supabase.from("users").select("id").eq("email", userEmail).single()
-
         if (user) {
           userId = user.id
           console.log("✅ User found via NextAuth server:", userId)
@@ -47,38 +38,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("📊 Final auth result:")
-    console.log("  - User ID:", userId)
-    console.log("  - User Email:", userEmail)
-
     if (!userId) {
-      console.log("❌ No valid user found")
-      return NextResponse.json(
-        {
-          error: "No autorizado - Usuario no encontrado",
-          debug: {
-            headerEmail,
-            timestamp: new Date().toISOString(),
-          },
-        },
-        { status: 401 },
-      )
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
     const formData = await request.formData()
     const file = formData.get("file") as File
 
-    if (!file) {
-      return NextResponse.json({ error: "No se encontró archivo" }, { status: 400 })
-    }
-
-    // Validaciones
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "El archivo debe ser una imagen" }, { status: 400 })
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "La imagen no puede superar 10MB" }, { status: 400 })
+    if (!file || !file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: "Archivo inválido" }, { status: 400 })
     }
 
     // Generar nombre único
@@ -87,10 +55,7 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split(".").pop() || "jpg"
     const fileName = `posts/${userId}/${timestamp}-${randomString}.${fileExtension}`
 
-    console.log("📁 Generated filename:", fileName)
-
     try {
-      // Verificar variables de entorno
       const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
       const accessKeyId = process.env.CLOUDFLARE_ACCESS_KEY_ID
       const secretAccessKey = process.env.CLOUDFLARE_SECRET_ACCESS_KEY
@@ -106,7 +71,7 @@ export async function POST(request: NextRequest) {
         throw new Error("Missing Cloudflare R2 configuration")
       }
 
-      // Configurar S3 Client para Cloudflare R2
+      // Configurar S3 Client
       const s3Client = new S3Client({
         region: "auto",
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
@@ -116,11 +81,10 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Convertir archivo a buffer
+      // Subir archivo
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
 
-      // Subir a R2 usando S3 SDK
       const uploadCommand = new PutObjectCommand({
         Bucket: bucketName,
         Key: fileName,
@@ -130,10 +94,17 @@ export async function POST(request: NextRequest) {
 
       await s3Client.send(uploadCommand)
 
-      // 🎯 USAR TU DOMINIO PERSONALIZADO
-      const publicUrl = `https://cdn.pixbae-gaming.com/${fileName}`
+      // 🎯 USAR TU URL PÚBLICA REAL
+      const publicDevUrl = `https://pub-e8d3b4b205fb43fb94d31b9b3a69f016.r2.dev/${fileName}`
+      const customDomainUrl = `https://cdn.pixbae-gaming.com/${fileName}`
 
-      console.log("✅ Upload successful to R2:", publicUrl)
+      // Usar Public Development URL como primera opción (más confiable)
+      const publicUrl = publicDevUrl
+
+      console.log("✅ Upload successful to R2:")
+      console.log("  - Public Dev URL:", publicDevUrl)
+      console.log("  - Custom Domain:", customDomainUrl)
+      console.log("  - Using:", publicUrl)
 
       return NextResponse.json({
         success: true,
@@ -141,14 +112,17 @@ export async function POST(request: NextRequest) {
         fileName,
         message: "¡Imagen subida exitosamente a Cloudflare R2!",
         user: userEmail,
-        customDomain: true,
+        urls: {
+          publicDev: publicDevUrl,
+          custom: customDomainUrl,
+        },
       })
     } catch (r2Error) {
       console.error("❌ R2 upload error:", r2Error)
 
-      // FALLBACK MEJORADO
+      // Fallback mejorado
       const timestamp = Date.now()
-      const placeholderUrl = `https://via.placeholder.com/600x400/1e293b/ffffff?text=Imagen+${timestamp}`
+      const placeholderUrl = `https://via.placeholder.com/600x400/1e293b/ffffff?text=R2+Error+${timestamp}`
 
       console.log("🔄 Using placeholder fallback:", placeholderUrl)
 
@@ -156,19 +130,13 @@ export async function POST(request: NextRequest) {
         success: true,
         url: placeholderUrl,
         fileName,
-        message: "¡Imagen procesada! (usando placeholder temporal)",
+        message: "Error en R2, usando placeholder temporal",
         user: userEmail,
         fallback: true,
       })
     }
   } catch (error) {
     console.error("💥 Error uploading:", error)
-    return NextResponse.json(
-      {
-        error: "Error interno del servidor",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
