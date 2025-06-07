@@ -163,7 +163,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
               src={post.image_url || "/placeholder.svg"}
               alt="Imagen del post"
               fill
-              className="object-contain rounded-lg"
+              className="object-cover rounded-lg"
               onError={() => {
                 console.error("❌ Error cargando imagen:", post.image_url)
                 setImageError(true)
