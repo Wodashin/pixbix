@@ -1,89 +1,72 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🚀 Iniciando subida de imagen...")
+    const headerEmail = request.headers.get("x-user-email")
+
+    // Es una buena práctica verificar si el email viene en el header
+    if (!headerEmail) {
+      return NextResponse.json({ error: "No autorizado, falta email de usuario" }, { status: 401 })
+    }
 
     const formData = await request.formData()
     const file = formData.get("file") as File
 
     if (!file) {
-      console.log("❌ No se encontró archivo")
-      return NextResponse.json({ message: "No se encontró archivo" }, { status: 400 })
+      return NextResponse.json({ error: "No se encontró archivo" }, { status: 400 })
     }
 
-    console.log("📁 Archivo recibido:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    })
+    // --- Lectura de Variables de Entorno ---
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+    const accessKeyId = process.env.CLOUDFLARE_ACCESS_KEY_ID
+    const secretAccessKey = process.env.CLOUDFLARE_SECRET_ACCESS_KEY
+    const bucketName = process.env.CLOUDFLARE_BUCKET_NAME
 
-    // Validar tipo de archivo
-    if (!file.type.startsWith("image/")) {
-      console.log("❌ Tipo de archivo inválido:", file.type)
-      return NextResponse.json({ message: "Tipo de archivo no válido" }, { status: 400 })
+    // Verificación de que todas las variables necesarias existen
+    if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
+      console.error("Error: Faltan una o más variables de entorno de Cloudflare R2.")
+      throw new Error("Configuración del servidor incompleta para la subida de archivos.")
     }
 
-    // Validar tamaño (5MB máximo)
-    if (file.size > 5 * 1024 * 1024) {
-      console.log("❌ Archivo muy grande:", file.size)
-      return NextResponse.json({ message: "Archivo muy grande (máximo 5MB)" }, { status: 400 })
-    }
-
-    // Generar nombre único
+    // --- Lógica para Generar Nombre de Archivo Único ---
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(7)
     const fileExtension = file.name.split(".").pop() || "jpg"
+    // Usamos una ruta simple para el ejemplo, puedes ajustarla si es necesario
     const fileName = `posts/uploads/${timestamp}-${randomString}.${fileExtension}`
 
-    console.log("📝 Nombre de archivo generado:", fileName)
-
-    // Convertir archivo a ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    console.log("💾 Buffer creado, tamaño:", buffer.length)
-
-    // Subir a Cloudflare R2
-    const uploadResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/r2/buckets/${process.env.CLOUDFLARE_BUCKET_NAME}/objects/${fileName}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-          "Content-Type": file.type,
-        },
-        body: buffer,
+    // --- Configuración del Cliente S3 ---
+    const s3Client = new S3Client({
+      region: "auto",
+      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey,
       },
-    )
-
-    console.log("📡 Respuesta de Cloudflare:", uploadResponse.status)
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text()
-      console.error("❌ Error de Cloudflare:", errorText)
-      throw new Error(`Error subiendo a Cloudflare: ${uploadResponse.status}`)
-    }
-
-    // Construir URL pública
-    const publicUrl = `${process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL || "https://pub-e8d3b4b205fb43f594d31b93a69f016.r2.dev"}/${fileName}`
-
-    console.log("✅ Imagen subida exitosamente:", publicUrl)
-
-    return NextResponse.json({
-      url: publicUrl,
-      fileName: fileName,
-      size: file.size,
-      type: file.type,
     })
-  } catch (error) {
-    console.error("💥 Error en upload/simple:", error)
-    return NextResponse.json(
-      {
-        message: "Error interno del servidor",
-        error: error instanceof Error ? error.message : "Error desconocido",
-      },
-      { status: 500 },
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    // --- Envío del Comando de Subida ---
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: fileName,
+        Body: buffer,
+        ContentType: file.type,
+      }),
     )
+
+    // --- Construcción de la URL Pública ---
+    // Asegúrate de que esta variable de entorno esté configurada en Vercel
+    const publicUrlBase =
+      process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL || `https://pub-e8d3b4b205fb43f594d31b93a69f016.r2.dev`
+    const publicUrl = `${publicUrlBase}/${fileName}`
+
+    return NextResponse.json({ url: publicUrl })
+  } catch (error) {
+    console.error("Error en la subida de imagen:", error)
+    return NextResponse.json({ message: "Error interno del servidor" }, { status: 500 })
   }
 }
