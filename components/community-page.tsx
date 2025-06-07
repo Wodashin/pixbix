@@ -453,13 +453,13 @@ export function CommunityPage() {
                       {/* Post Content */}
                       <p className="text-slate-300 mb-4">{post.content}</p>
 
-                      {/* Post Image */}
+                      {/* Post Image - CONTENEDOR FIJO CON DIMENSIONES CONTROLADAS */}
                       {post.image_url && (
-                        <div className="mb-4 rounded-lg overflow-hidden">
+                        <div className="relative w-full h-[400px] rounded-lg overflow-hidden bg-slate-700 mb-4">
                           <img
                             src={post.image_url || "/placeholder.svg"}
                             alt="Post content"
-                            className="w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                            className="absolute inset-0 w-full h-full object-cover rounded-lg hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       )}
