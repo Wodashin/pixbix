@@ -156,15 +156,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
       <div className="space-y-3">
         <p className="text-white leading-relaxed">{post.content}</p>
 
-        {/* 🖼️ IMAGEN COMPLETA - AJUSTADA PARA VER TODO */}
+        {/* 🖼️ IMAGEN CON FILL - OPCIÓN 2: IMAGEN COMPLETA */}
         {post.image_url && !imageError && (
-          <div className="relative w-full rounded-lg overflow-hidden bg-slate-700">
+          <div className="relative w-full h-72 rounded-lg overflow-hidden bg-slate-800">
             <Image
               src={post.image_url || "/placeholder.svg"}
               alt="Imagen del post"
-              width={600}
-              height={300}
-              className="w-full h-72 object-contain rounded-lg bg-slate-800"
+              fill
+              className="object-contain rounded-lg"
               onError={() => {
                 console.error("❌ Error cargando imagen:", post.image_url)
                 setImageError(true)
