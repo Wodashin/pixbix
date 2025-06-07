@@ -156,30 +156,33 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
       <div className="space-y-3">
         <p className="text-white leading-relaxed">{post.content}</p>
 
-        {/* Imagen del post - MEJORADA */}
+        {/* 🖼️ IMAGEN COMPLETA - AJUSTADA PARA VER TODO */}
         {post.image_url && !imageError && (
           <div className="relative w-full rounded-lg overflow-hidden bg-slate-700">
             <Image
               src={post.image_url || "/placeholder.svg"}
               alt="Imagen del post"
               width={600}
-              height={400}
-              className="w-full h-64 object-cover rounded-lg"
+              height={300}
+              className="w-full h-72 object-contain rounded-lg bg-slate-800"
               onError={() => {
                 console.error("❌ Error cargando imagen:", post.image_url)
                 setImageError(true)
               }}
-              onLoad={() => console.log("✅ Imagen cargada:", post.image_url)}
+              onLoad={() => console.log("✅ Imagen cargada correctamente:", post.image_url)}
               unoptimized
               priority={false}
             />
           </div>
         )}
 
-        {/* Mostrar error de imagen en desarrollo */}
-        {imageError && process.env.NODE_ENV === "development" && (
-          <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-red-300 text-sm">
-            <strong>Error cargando imagen:</strong> {post.image_url}
+        {/* Mostrar error si la imagen no carga */}
+        {imageError && (
+          <div className="w-full h-64 bg-slate-700 rounded-lg flex items-center justify-center">
+            <div className="text-center text-slate-400">
+              <p className="text-sm">❌ Error cargando imagen</p>
+              <p className="text-xs mt-1 opacity-75">{post.image_url}</p>
+            </div>
           </div>
         )}
 
