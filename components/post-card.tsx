@@ -158,7 +158,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
 
         {/* 🖼️ IMAGEN CON FILL - OPCIÓN 2: IMAGEN COMPLETA */}
         {post.image_url && !imageError && (
-          <div className="relative w-full h-[500px] rounded-lg overflow-hidden bg-slate-800">
+          <div className="relative w-full h-[400px] rounded-lg overflow-hidden bg-slate-800">
             <Image
               src={post.image_url || "/placeholder.svg"}
               alt="Imagen del post"
