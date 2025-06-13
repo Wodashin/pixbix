@@ -1,16 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
-import { Menu, Search, ShoppingCart, Gamepad2 } from "lucide-react"
-import { AuthNavEnhanced } from "@/components/auth-nav-enhanced"
+import { Menu, Search, ShoppingCart, Gamepad2, Shield } from "lucide-react"
+import { AuthNavReal } from "@/components/auth-nav-real"
+import { useSession } from "next-auth/react"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { data: session } = useSession()
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Verificar si el usuario es admin o moderador
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!session?.user?.email) return
+
+      try {
+        const supabase = createClientComponentClient()
+        const { data, error } = await supabase.from("users").select("role").eq("email", session.user.email).single()
+
+        if (data && !error) {
+          setUserRole(data.role)
+          setIsAdmin(data.role === "admin" || data.role === "moderator")
+        }
+      } catch (error) {
+        console.error("Error al verificar rol:", error)
+      }
+    }
+
+    checkUserRole()
+  }, [session])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
@@ -20,7 +45,7 @@ export function Header() {
           <Link href="/" className="flex items-center space-x-2">
             <Gamepad2 className="h-8 w-8 text-cyan-500" />
             <span className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-              PixBae
+              Nobux Gaming
             </span>
           </Link>
 
@@ -41,6 +66,15 @@ export function Header() {
             <Link href="/comunidad" className="text-slate-300 hover:text-cyan-400 transition-colors">
               Comunidad
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/usuarios"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors flex items-center"
+              >
+                <Shield className="h-4 w-4 mr-1" />
+                Admin
+              </Link>
+            )}
           </nav>
 
           {/* Actions */}
@@ -72,63 +106,58 @@ export function Header() {
               <ShoppingCart className="h-5 w-5" />
             </Button>
 
-            {/* Auth Navigation - Usando el componente mejorado */}
+            {/* Auth Navigation */}
             <div className="hidden md:block">
-              <AuthNavEnhanced />
+              <AuthNavReal />
             </div>
 
             {/* Mobile Menu */}
-            <Dialog open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <DialogTrigger asChild>
+            <Sheet>
+              <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden text-slate-300">
                   <Menu className="h-5 w-5" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-slate-950 border-slate-800 w-full max-w-sm">
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-slate-950 border-slate-800">
                 <nav className="flex flex-col space-y-4 mt-8">
-                  <Link
-                    href="/compañeros"
-                    className="text-slate-300 hover:text-cyan-400 text-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
+                  <Link href="/compañeros" className="text-slate-300 hover:text-cyan-400 text-lg">
                     Compañeros
                   </Link>
-                  <Link
-                    href="/noticias"
-                    className="text-slate-300 hover:text-cyan-400 text-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
+                  <Link href="/noticias" className="text-slate-300 hover:text-cyan-400 text-lg">
                     Noticias
                   </Link>
-                  <Link
-                    href="/eventos"
-                    className="text-slate-300 hover:text-cyan-400 text-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
+                  <Link href="/eventos" className="text-slate-300 hover:text-cyan-400 text-lg">
                     Eventos
                   </Link>
-                  <Link
-                    href="/marketplace"
-                    className="text-slate-300 hover:text-cyan-400 text-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
+                  <Link href="/marketplace" className="text-slate-300 hover:text-cyan-400 text-lg">
                     Marketplace
                   </Link>
-                  <Link
-                    href="/comunidad"
-                    className="text-slate-300 hover:text-cyan-400 text-lg"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
+                  <Link href="/comunidad" className="text-slate-300 hover:text-cyan-400 text-lg">
                     Comunidad
                   </Link>
 
+                  {isAdmin && (
+                    <Link
+                      href="/admin/usuarios"
+                      className="text-cyan-400 hover:text-cyan-300 text-lg flex items-center"
+                    >
+                      <Shield className="h-4 w-4 mr-1" />
+                      Administración
+                    </Link>
+                  )}
+
                   {/* Mobile Auth Links */}
                   <div className="border-t border-slate-700 pt-4 mt-4">
-                    <AuthNavEnhanced />
+                    <Link href="/login" className="text-slate-300 hover:text-cyan-400 text-lg block mb-2">
+                      Iniciar Sesión
+                    </Link>
+                    <Link href="/register" className="text-slate-300 hover:text-cyan-400 text-lg block">
+                      Registrarse
+                    </Link>
                   </div>
                 </nav>
-              </DialogContent>
-            </Dialog>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
