@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { Providers } from "@/components/providers"
 import { AuthProviderSupabase } from "@/components/auth-provider-supabase"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -20,9 +19,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProviderSupabase>
-          <Providers>{children}</Providers>
-        </AuthProviderSupabase>
+        <AuthProviderSupabase>{children}</AuthProviderSupabase>
       </body>
     </html>
   )
