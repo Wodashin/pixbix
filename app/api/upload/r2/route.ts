@@ -1,7 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
+import { createClient } from "@/utils/supabase/server"
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 
+const supabase = createClient()
+const { data: { user } } = await supabase.auth.getUser()
+
+if (!user) {
+  return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+}
 // Configuración del cliente S3 para R2
 const S3 = new S3Client({
   region: "auto",
