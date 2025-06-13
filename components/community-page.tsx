@@ -1,275 +1,112 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   MessageSquare,
+  Heart,
+  Share2,
   Users,
   TrendingUp,
   Calendar,
   Search,
-  Heart,
-  MessageCircle,
-  Share2,
-  Eye,
   Plus,
-  Gamepad2,
-  Trophy,
-  X,
-  Trash2,
-  MoreHorizontal,
+  MessageCircle,
+  Eye,
 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Textarea } from "@/components/ui/textarea"
-import { useSession } from "next-auth/react"
-import { GameSelectorModal } from "@/components/game-selector-modal"
-import { createClient } from "@/utils/supabase/client"
-import { AchievementSelectorModal } from "@/components/achievement-selector-modal"
-import { CommentSection } from "@/components/comment-section"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ImageUploadComponent } from "@/components/image-upload-component"
+import { useAuth } from "@/components/auth-provider-supabase"
 
-interface CommunityStats {
-  activeUsers: number
-  postsToday: number
-  totalPosts: number
-  upcomingEvents: number
-}
+const communityPosts = [
+  {
+    id: 1,
+    author: {
+      name: "GamerPro_2024",
+      avatar: "/placeholder.svg?height=40&width=40",
+      badge: "Veterano",
+      level: 45,
+    },
+    content:
+      "¡Acabo de completar Elden Ring al 100%! Después de 120 horas, finalmente derroté a todos los jefes. ¿Alguien más ha logrado esto? ¡Compartan sus experiencias!",
+    image: "/placeholder.svg?height=300&width=500",
+    timestamp: "hace 2 horas",
+    likes: 234,
+    comments: 45,
+    shares: 12,
+    tags: ["Elden Ring", "Logro", "RPG"],
+  },
+  {
+    id: 2,
+    author: {
+      name: "StreamerLuna",
+      avatar: "/placeholder.svg?height=40&width=40",
+      badge: "Streamer",
+      level: 38,
+    },
+    content:
+      "¡Hoy empiezo mi stream de 24 horas jugando Valorant! El objetivo es llegar a Radiante. ¡Vengan a apoyar y juguemos juntos! 🎮✨",
+    timestamp: "hace 4 horas",
+    likes: 189,
+    comments: 67,
+    shares: 23,
+    tags: ["Valorant", "Stream", "Competitivo"],
+  },
+  {
+    id: 3,
+    author: {
+      name: "RetroGamer95",
+      avatar: "/placeholder.svg?height=40&width=40",
+      badge: "Coleccionista",
+      level: 52,
+    },
+    content:
+      "Encontré mi vieja consola Nintendo 64 en el ático. ¿Qué juegos me recomiendan para revivir la nostalgia? Estoy pensando en Super Mario 64 y Zelda OoT.",
+    timestamp: "hace 6 horas",
+    likes: 156,
+    comments: 89,
+    shares: 8,
+    tags: ["Retro", "Nintendo", "Nostalgia"],
+  },
+]
 
-interface TrendingTopic {
-  name: string
-  posts: number
-}
+const trendingTopics = [
+  { name: "Elden Ring DLC", posts: 1234 },
+  { name: "Valorant Champions", posts: 987 },
+  { name: "Nintendo Direct", posts: 756 },
+  { name: "Gaming Setup", posts: 543 },
+  { name: "Indie Games", posts: 432 },
+]
+
+const communityStats = [
+  { label: "Miembros Activos", value: "15.2K", icon: Users },
+  { label: "Posts Hoy", value: "342", icon: MessageSquare },
+  { label: "Trending", value: "25", icon: TrendingUp },
+  { label: "Eventos", value: "8", icon: Calendar },
+]
 
 export function CommunityPage() {
-  const [activeTab, setActiveTab] = useState("feed")
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [newPost, setNewPost] = useState("")
-  const [selectedGame, setSelectedGame] = useState("")
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [posts, setPosts] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isPosting, setIsPosting] = useState(false)
-  const [expandedComments, setExpandedComments] = useState<string[]>([])
-  const [stats, setStats] = useState<CommunityStats>({
-    activeUsers: 0,
-    postsToday: 0,
-    totalPosts: 0,
-    upcomingEvents: 0,
-  })
-  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
-  const supabase = createClient()
-  const [isAchievementModalOpen, setIsAchievementModalOpen] = useState(false)
-  const [postImage, setPostImage] = useState<string>("")
+  const [activeTab, setActiveTab] = useState("feed")
 
-  // Fetch community stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch("/api/community/stats")
-        if (response.ok) {
-          const data = await response.json()
-          setStats(data)
-        }
-      } catch (error) {
-        console.error("Error fetching stats:", error)
-      }
+  const handleCreatePost = () => {
+    if (newPost.trim()) {
+      // Aquí iría la lógica para crear un nuevo post
+      console.log("Nuevo post:", newPost)
+      setNewPost("")
     }
-
-    fetchStats()
-  }, [])
-
-  // Fetch trending topics
-  useEffect(() => {
-    const fetchTrending = async () => {
-      try {
-        const response = await fetch("/api/community/trending")
-        if (response.ok) {
-          const data = await response.json()
-          setTrendingTopics(data)
-        }
-      } catch (error) {
-        console.error("Error fetching trending:", error)
-      }
-    }
-
-    fetchTrending()
-  }, [])
-
-  // Fetch posts
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const response = await fetch("/api/posts")
-        if (response.ok) {
-          const data = await response.json()
-          setPosts(Array.isArray(data) ? data : data.posts || [])
-        }
-      } catch (error) {
-        console.error("Error fetching posts:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchPosts()
-  }, [])
-
-  const handleCreatePost = async () => {
-    if (!newPost.trim() || !session || isPosting) return
-
-    setIsPosting(true)
-    try {
-      const tags = [...selectedTags]
-      if (selectedGame) tags.push(selectedGame)
-
-      const response = await fetch("/api/posts", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-email": session.user?.email || "",
-        },
-        body: JSON.stringify({
-          content: newPost,
-          tags: tags.length > 0 ? tags : undefined,
-          image_url: postImage || null,
-        }),
-      })
-
-      if (response.ok) {
-        const newPostData = await response.json()
-        setPosts([newPostData, ...posts])
-        setNewPost("")
-        setSelectedGame("")
-        setSelectedTags([])
-        setPostImage("")
-      } else {
-        const errorData = await response.json()
-        alert("Error al crear el post: " + (errorData.error || "Error desconocido"))
-      }
-    } catch (error) {
-      console.error("Error creating post:", error)
-      alert("Error al crear el post.")
-    } finally {
-      setIsPosting(false)
-    }
-  }
-
-  const handleLikePost = async (postId: string) => {
-    if (!session) {
-      alert("Debes iniciar sesión para dar like")
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/posts/${postId}/like`, {
-        method: "POST",
-        headers: {
-          "x-user-email": session.user?.email || "",
-        },
-      })
-
-      if (response.ok) {
-        const { liked } = await response.json()
-        setPosts(
-          posts.map((post) =>
-            post.id === postId
-              ? {
-                  ...post,
-                  likes_count: liked ? (post.likes_count || 0) + 1 : Math.max((post.likes_count || 0) - 1, 0),
-                  user_has_liked: liked,
-                }
-              : post,
-          ),
-        )
-      }
-    } catch (error) {
-      console.error("Error liking post:", error)
-    }
-  }
-
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este post?")) return
-
-    try {
-      const response = await fetch(`/api/posts/${postId}`, {
-        method: "DELETE",
-        headers: {
-          "x-user-email": session.user?.email || "",
-        },
-      })
-
-      if (response.ok) {
-        setPosts(posts.filter((post) => post.id !== postId))
-      } else {
-        alert("Error al eliminar el post")
-      }
-    } catch (error) {
-      console.error("Error deleting post:", error)
-      alert("Error al eliminar el post")
-    }
-  }
-
-  const handleSharePost = async (post: any) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Post de ${post.user?.display_name || post.user?.username || "Usuario"}`,
-          text: post.content,
-          url: window.location.href,
-        })
-      } catch (error) {
-        console.log("Error sharing:", error)
-      }
-    } else {
-      // Fallback: copiar al portapapeles
-      try {
-        await navigator.clipboard.writeText(window.location.href)
-        alert("Enlace copiado al portapapeles")
-      } catch (error) {
-        console.log("Error copying to clipboard:", error)
-      }
-    }
-  }
-
-  const toggleComments = (postId: string) => {
-    setExpandedComments((prev) => (prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]))
-  }
-
-  const addTag = (tag: string) => {
-    if (!selectedTags.includes(tag)) {
-      setSelectedTags([...selectedTags, tag])
-    }
-  }
-
-  const removeTag = (tag: string) => {
-    setSelectedTags(selectedTags.filter((t) => t !== tag))
-  }
-
-  const communityStatsDisplay = [
-    { label: "Miembros Activos", value: stats.activeUsers.toLocaleString(), icon: Users },
-    { label: "Posts Hoy", value: stats.postsToday.toString(), icon: MessageSquare },
-    { label: "Trending", value: trendingTopics.length.toString(), icon: TrendingUp },
-    { label: "Eventos", value: stats.upcomingEvents.toString(), icon: Calendar },
-  ]
-
-  const handleAchievementSelect = (achievement: any) => {
-    addTag(`logro-${achievement.name}`)
-  }
-
-  const isPostOwner = (post: any) => {
-    return session?.user?.email === post.user?.username || session?.user?.id === post.user_id
   }
 
   return (
     <main className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Comunidad PixBae</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Comunidad Gaming</h1>
         <p className="text-xl text-slate-400 max-w-2xl">
           Conecta con gamers de todo el mundo, comparte tus logros y descubre nuevas experiencias
         </p>
@@ -277,7 +114,7 @@ export function CommunityPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {communityStatsDisplay.map((stat, index) => (
+        {communityStats.map((stat, index) => (
           <Card key={index} className="bg-slate-800 border-slate-700">
             <CardContent className="p-4 text-center">
               <stat.icon className="h-6 w-6 mx-auto mb-2 text-cyan-400" />
@@ -305,239 +142,108 @@ export function CommunityPage() {
             </TabsList>
 
             {/* Create Post */}
-            {session && (
-              <Card className="bg-slate-800 border-slate-700 mb-6 mt-6">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Crear Post
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="¿Qué está pasando en tu mundo gaming?"
-                    value={newPost}
-                    onChange={(e) => setNewPost(e.target.value)}
-                    className="bg-slate-700 border-slate-600 text-slate-100 min-h-[100px]"
-                  />
+            <Card className="bg-slate-800 border-slate-700 mb-6">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Plus className="mr-2 h-5 w-5" />
+                  Crear Post
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Textarea
+                  placeholder="¿Qué está pasando en tu mundo gaming?"
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value)}
+                  className="bg-slate-700 border-slate-600 text-slate-100 min-h-[100px]"
+                />
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                      📷 Imagen
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                      🎮 Juego
+                    </Button>
+                    <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
+                      🏆 Logro
+                    </Button>
+                  </div>
+                  <Button onClick={handleCreatePost} className="bg-purple-600 hover:bg-purple-700">
+                    Publicar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-                  {/* Image Upload */}
-                  {postImage ? (
-                    <ImageUploadComponent
-                      currentImage={postImage}
-                      onImageUpload={setPostImage}
-                      onImageRemove={() => setPostImage("")}
-                    />
-                  ) : null}
-
-                  {/* Game Selection */}
-                  {selectedGame && (
-                    <div className="flex items-center space-x-2">
-                      <Badge className="bg-cyan-600 text-white">
-                        🎮 {selectedGame}
-                        <button onClick={() => setSelectedGame("")} className="ml-2">
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
+            <TabsContent value="feed" className="space-y-6">
+              {communityPosts.map((post) => (
+                <Card key={post.id} className="bg-slate-800 border-slate-700">
+                  <CardContent className="p-6">
+                    {/* Post Header */}
+                    <div className="flex items-center space-x-3 mb-4">
+                      <Avatar>
+                        <AvatarImage src={post.author.avatar || "/placeholder.svg"} />
+                        <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-semibold text-white">{post.author.name}</h3>
+                          <Badge variant="secondary" className="bg-purple-600 text-white">
+                            {post.author.badge}
+                          </Badge>
+                          <span className="text-xs text-slate-400">Nivel {post.author.level}</span>
+                        </div>
+                        <p className="text-sm text-slate-400">{post.timestamp}</p>
+                      </div>
                     </div>
-                  )}
 
-                  {/* Tags */}
-                  {selectedTags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTags.map((tag) => (
-                        <Badge key={tag} className="bg-purple-600 text-white">
+                    {/* Post Content */}
+                    <p className="text-slate-300 mb-4">{post.content}</p>
+
+                    {/* Post Image */}
+                    {post.image && (
+                      <div className="mb-4 rounded-lg overflow-hidden">
+                        <img
+                          src={post.image || "/placeholder.svg"}
+                          alt="Post content"
+                          className="w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {post.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline" className="border-cyan-500 text-cyan-400">
                           #{tag}
-                          <button onClick={() => removeTag(tag)} className="ml-2">
-                            <X className="h-3 w-3" />
-                          </button>
                         </Badge>
                       ))}
                     </div>
-                  )}
 
-                  <div className="flex justify-between items-center">
-                    <div className="flex space-x-2">
-                      {!postImage && (
-                        <ImageUploadComponent onImageUpload={setPostImage} onImageRemove={() => setPostImage("")} />
-                      )}
-
-                      <GameSelectorModal onGameSelect={setSelectedGame}>
-                        <Button variant="outline" size="sm" className="border-slate-600 text-slate-300">
-                          <Gamepad2 className="mr-2 h-4 w-4" />
-                          Juego
-                        </Button>
-                      </GameSelectorModal>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-slate-600 text-slate-300"
-                        onClick={() => setIsAchievementModalOpen(true)}
-                      >
-                        <Trophy className="mr-2 h-4 w-4" />
-                        Logro
-                      </Button>
+                    {/* Post Actions */}
+                    <div className="flex items-center justify-between pt-4 border-t border-slate-700">
+                      <div className="flex items-center space-x-6">
+                        <button className="flex items-center space-x-2 text-slate-400 hover:text-red-400 transition-colors">
+                          <Heart className="h-5 w-5" />
+                          <span>{post.likes}</span>
+                        </button>
+                        <button className="flex items-center space-x-2 text-slate-400 hover:text-cyan-400 transition-colors">
+                          <MessageCircle className="h-5 w-5" />
+                          <span>{post.comments}</span>
+                        </button>
+                        <button className="flex items-center space-x-2 text-slate-400 hover:text-purple-400 transition-colors">
+                          <Share2 className="h-5 w-5" />
+                          <span>{post.shares}</span>
+                        </button>
+                      </div>
+                      <div className="flex items-center space-x-1 text-slate-400">
+                        <Eye className="h-4 w-4" />
+                        <span className="text-sm">{post.likes * 3} vistas</span>
+                      </div>
                     </div>
-                    <Button
-                      onClick={handleCreatePost}
-                      className="bg-purple-600 hover:bg-purple-700"
-                      disabled={!newPost.trim() || isPosting}
-                    >
-                      {isPosting ? "Publicando..." : "Publicar"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <TabsContent value="feed" className="space-y-6">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-slate-400">Cargando posts...</p>
-                </div>
-              ) : posts && posts.length > 0 ? (
-                posts.map((post) => (
-                  <Card key={post.id} className="bg-slate-800 border-slate-700">
-                    <CardContent className="p-6">
-                      {/* Post Header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage
-                              src={post.user?.avatar_url || "/placeholder.svg?height=40&width=40&query=avatar"}
-                            />
-                            <AvatarFallback>{post.user?.username?.[0]?.toUpperCase() || "U"}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="font-semibold text-white">
-                                {post.user?.display_name || post.user?.username || "Usuario"}
-                              </h3>
-                              <Badge variant="secondary" className="bg-purple-600 text-white">
-                                Gamer
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-slate-400">
-                              {new Date(post.created_at).toLocaleString("es-ES", {
-                                day: "numeric",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Post Options */}
-                        {isPostOwner(post) && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="bg-slate-800 border-slate-700">
-                              <DropdownMenuItem
-                                onClick={() => handleDeletePost(post.id)}
-                                className="text-red-400 hover:text-red-300 hover:bg-slate-700 cursor-pointer"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-
-                      {/* Post Content */}
-                      <p className="text-slate-300 mb-4">{post.content}</p>
-
-                      {/* Post Image - TAMAÑO NATURAL */}
-                      {post.image_url && (
-                        <div className="w-full rounded-lg overflow-hidden bg-slate-700 mb-4">
-                          <img
-                            src={post.image_url || "/placeholder.svg"}
-                            alt="Post content"
-                            className="w-full h-auto rounded-lg hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      )}
-
-                      {/* Tags */}
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {post.tags.map((tag: string, index: number) => {
-                            if (tag.startsWith("logro-")) {
-                              const achievementName = tag.replace("logro-", "").toUpperCase()
-                              return (
-                                <Badge
-                                  key={index}
-                                  variant="default"
-                                  className="text-xs bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
-                                >
-                                  🏆 {achievementName}
-                                </Badge>
-                              )
-                            }
-                            return (
-                              <Badge key={index} variant="outline" className="border-cyan-500 text-cyan-400">
-                                #{tag}
-                              </Badge>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/* Post Actions */}
-                      <div className="flex items-center justify-between pt-4 border-t border-slate-700">
-                        <div className="flex items-center space-x-6">
-                          <button
-                            className={`flex items-center space-x-2 transition-colors ${
-                              post.user_has_liked ? "text-red-400" : "text-slate-400 hover:text-red-400"
-                            }`}
-                            onClick={() => handleLikePost(post.id)}
-                          >
-                            <Heart className={`h-5 w-5 ${post.user_has_liked ? "fill-current" : ""}`} />
-                            <span>{post.likes_count || 0}</span>
-                          </button>
-                          <button
-                            className="flex items-center space-x-2 text-slate-400 hover:text-cyan-400 transition-colors"
-                            onClick={() => toggleComments(post.id)}
-                          >
-                            <MessageCircle className="h-5 w-5" />
-                            <span>{post.comments_count || 0}</span>
-                          </button>
-                          <button
-                            className="flex items-center space-x-2 text-slate-400 hover:text-purple-400 transition-colors"
-                            onClick={() => handleSharePost(post)}
-                          >
-                            <Share2 className="h-5 w-5" />
-                            <span>Compartir</span>
-                          </button>
-                        </div>
-                        <div className="flex items-center space-x-1 text-slate-400">
-                          <Eye className="h-4 w-4" />
-                          <span className="text-sm">{post.views_count || 0} vistas</span>
-                        </div>
-                      </div>
-
-                      {/* Comments Section */}
-                      {expandedComments.includes(post.id) && (
-                        <div className="mt-4 pt-4 border-t border-slate-700">
-                          <CommentSection postId={post.id} />
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-12">
-                  <h3 className="text-xl font-semibold text-white mb-2">¡Bienvenido a la comunidad!</h3>
-                  <p className="text-slate-400 mb-4">No hay posts aún. ¡Sé el primero en compartir algo!</p>
-                  {!session && <p className="text-slate-500">Inicia sesión para crear tu primer post</p>}
-                </div>
-              )}
+                  </CardContent>
+                </Card>
+              ))}
             </TabsContent>
 
             <TabsContent value="popular" className="space-y-6">
@@ -586,13 +292,8 @@ export function CommunityPage() {
                     <p className="font-medium text-white">#{topic.name}</p>
                     <p className="text-sm text-slate-400">{topic.posts} posts</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-purple-400 hover:text-purple-300"
-                    onClick={() => addTag(topic.name)}
-                  >
-                    Usar
+                  <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300">
+                    Ver
                   </Button>
                 </div>
               ))}
@@ -616,16 +317,14 @@ export function CommunityPage() {
                 <Calendar className="mr-2 h-4 w-4" />
                 Ver Eventos
               </Button>
+              <Button variant="outline" className="w-full border-slate-600 text-slate-300 hover:bg-slate-700">
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Chat Global
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
-      {/* Modal de selección de logros */}
-      <AchievementSelectorModal
-        isOpen={isAchievementModalOpen}
-        onClose={() => setIsAchievementModalOpen(false)}
-        onSelect={handleAchievementSelect}
-      />
     </main>
   )
 }
