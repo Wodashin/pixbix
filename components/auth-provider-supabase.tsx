@@ -38,12 +38,35 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         setUser(session.user)
+
+        // Crear o actualizar usuario en la tabla users
+        try {
+          const { error } = await supabase.from("users").upsert(
+            {
+              id: session.user.id,
+              email: session.user.email,
+              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name,
+              image: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+              role: "user",
+            },
+            {
+              onConflict: "id",
+            },
+          )
+
+          if (error) {
+            console.error("Error al crear/actualizar usuario:", error)
+          }
+        } catch (error) {
+          console.error("Error al procesar usuario:", error)
+        }
       } else if (event === "SIGNED_OUT") {
         setUser(null)
       }
+      setLoading(false)
     })
 
     return () => {
@@ -52,16 +75,25 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   }, [supabase])
 
   const signIn = async (provider: "google" | "discord") => {
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
+
+    if (error) {
+      console.error("Error en signIn:", error)
+      throw error
+    }
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      console.error("Error en signOut:", error)
+      throw error
+    }
   }
 
   return <AuthContext.Provider value={{ user, loading, signIn, signOut }}>{children}</AuthContext.Provider>
