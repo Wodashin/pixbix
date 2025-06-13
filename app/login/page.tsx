@@ -4,13 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Gamepad2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Gamepad2, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useAuth } from "@/components/auth-provider-supabase"
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isManualLogin, setIsManualLogin] = useState(false)
   const { signIn } = useAuth()
 
   const handleGoogleLogin = async () => {
@@ -33,6 +38,13 @@ export default function LoginPage() {
     }
   }
 
+  const handleManualLogin = async (formData: FormData) => {
+    setIsManualLogin(true)
+    // Aquí iría la lógica de login manual con email/password
+    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulación
+    setIsManualLogin(false)
+  }
+
   return (
     <div className="min-h-screen bg-slate-950">
       <Header />
@@ -49,6 +61,7 @@ export default function LoginPage() {
               <CardTitle className="text-white text-center">Iniciar Sesión</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Social Login */}
               <div className="space-y-3">
                 <Button
                   onClick={handleGoogleLogin}
@@ -89,6 +102,64 @@ export default function LoginPage() {
                   {isLoading ? "Conectando..." : "Continuar con Discord"}
                 </Button>
               </div>
+
+              <Separator className="bg-slate-600" />
+
+              {/* Manual Login */}
+              <form action={handleManualLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">
+                    Email
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="tu@email.com"
+                      className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-slate-300">
+                    Contraseña
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="pl-10 pr-10 bg-slate-700 border-slate-600 text-slate-100"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm">
+                    <Link href="/forgot-password" className="text-purple-400 hover:text-purple-300">
+                      ¿Olvidaste tu contraseña?
+                    </Link>
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isManualLogin}>
+                  {isManualLogin ? "Iniciando sesión..." : "Iniciar Sesión"}
+                </Button>
+              </form>
 
               <div className="text-center">
                 <span className="text-slate-400">¿No tienes cuenta? </span>
