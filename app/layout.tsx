@@ -1,30 +1,28 @@
 import type React from "react"
-import { Providers } from "@/components/providers"
-import { AuthFeedback } from "@/components/auth-feedback"
-import { ProfileCompletionHandler } from "@/components/profile-completion-handler"
+import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Analytics } from "@vercel/analytics/react"
 import "./globals.css"
-import { Suspense } from "react"
+import { Providers } from "@/components/providers"
+import { AuthProviderSupabase } from "@/components/auth-provider-supabase"
 
 const inter = Inter({ subsets: ["latin"] })
 
+export const metadata: Metadata = {
+  title: "Nobux Gaming",
+  description: "Plataforma de gaming y comunidad",
+}
+
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
-        <Providers>
-          <Suspense>
-            <AuthFeedback />
-            <ProfileCompletionHandler />
-            {children}
-          </Suspense>
-          <Analytics />
-        </Providers>
+        <AuthProviderSupabase>
+          <Providers>{children}</Providers>
+        </AuthProviderSupabase>
       </body>
     </html>
   )
