@@ -1,12 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth/next"
+import { createClient } from "@supabase/supabase-js"
 
-// Tipos de roles disponibles
-type Role = "user" | "event_creator" | "moderator" | "admin"
-
-export async function POST(req: NextRequest) {
+export async function POST(request: Request) {
   try {
     // Verificar la sesión del usuario
     const session = await getServerSession()
@@ -15,21 +11,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado. Debe iniciar sesión." }, { status: 401 })
     }
 
-    // Crear cliente de Supabase
-    const cookieStore = cookies()
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.delete({ name, ...options })
-        },
-      },
-    })
+    // Obtener datos de la solicitud
+    const { userId, newRole } = await request.json()
+
+    if (!userId || !newRole) {
+      return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 })
+    }
+
+    // Validar el rol
+    const validRoles = ["user", "event_creator", "moderator", "admin"]
+    if (!validRoles.includes(newRole)) {
+      return NextResponse.json({ error: "Rol no válido" }, { status: 400 })
+    }
+
+    // Crear cliente de Supabase con la clave de servicio
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     // Obtener el rol del usuario actual
     const { data: currentUserData, error: currentUserError } = await supabase
@@ -43,29 +39,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Error al verificar permisos" }, { status: 500 })
     }
 
-    // Verificar si el usuario tiene permisos de admin o moderador
+    // Verificar si el usuario tiene permisos para cambiar roles
     const currentUserRole = currentUserData.role
     if (currentUserRole !== "admin" && currentUserRole !== "moderator") {
       return NextResponse.json({ error: "No tiene permisos para realizar esta acción" }, { status: 403 })
     }
 
-    // Obtener datos de la solicitud
-    const { userId, newRole } = await req.json()
-
-    if (!userId || !newRole) {
-      return NextResponse.json({ error: "Faltan datos requeridos (userId o newRole)" }, { status: 400 })
-    }
-
-    // Validar el rol
-    const validRoles: Role[] = ["user", "event_creator", "moderator", "admin"]
-    if (!validRoles.includes(newRole as Role)) {
-      return NextResponse.json({ error: "Rol no válido" }, { status: 400 })
-    }
-
-    // Los moderadores solo pueden asignar roles de usuario y event_creator
-    if (currentUserRole === "moderator" && (newRole === "admin" || newRole === "moderator")) {
+    // Los moderadores no pueden crear otros moderadores o administradores
+    if (currentUserRole === "moderator" && (newRole === "moderator" || newRole === "admin")) {
       return NextResponse.json(
-        { error: "Los moderadores no pueden asignar roles de administrador o moderador" },
+        { error: "Los moderadores no pueden asignar roles de moderador o administrador" },
         { status: 403 },
       )
     }
@@ -78,9 +61,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Error al actualizar el rol del usuario" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, message: "Rol actualizado correctamente" }, { status: 200 })
+    return NextResponse.json({ success: true, message: `Rol actualizado a ${newRole}` })
   } catch (error) {
-    console.error("Error en la API de roles:", error)
+    console.error("Error en la API de actualización de roles:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
