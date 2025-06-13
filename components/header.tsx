@@ -7,23 +7,23 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Menu, Search, ShoppingCart, Gamepad2, Shield } from "lucide-react"
 import { AuthNavReal } from "@/components/auth-nav-real"
-import { useSession } from "next-auth/react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useAuth } from "@/components/auth-provider-supabase"
+import { createClient } from "@/utils/supabase/client"
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
   // Verificar si el usuario es admin o moderador
   useEffect(() => {
     const checkUserRole = async () => {
-      if (!session?.user?.email) return
+      if (!user?.email) return
 
       try {
-        const supabase = createClientComponentClient()
-        const { data, error } = await supabase.from("users").select("role").eq("email", session.user.email).single()
+        const supabase = createClient()
+        const { data, error } = await supabase.from("users").select("role").eq("email", user.email).single()
 
         if (data && !error) {
           setUserRole(data.role)
@@ -35,7 +35,7 @@ export function Header() {
     }
 
     checkUserRole()
-  }, [session])
+  }, [user])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-800 bg-slate-950/95 backdrop-blur supports-[backdrop-filter]:bg-slate-950/60">
