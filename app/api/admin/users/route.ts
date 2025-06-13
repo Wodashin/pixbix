@@ -1,62 +1,44 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
 import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 
 export async function GET() {
   try {
-    // Obtener email del usuario de diferentes fuentes
-    let userEmail = null
+    // Crear cliente de Supabase con cookies para obtener la sesión
+    const cookieStore = cookies()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
-    // 1. Intentar obtener email desde NextAuth
-    const session = await getServerSession()
-    if (session?.user?.email) {
-      userEmail = session.user.email
-      console.log("Email obtenido de NextAuth:", userEmail)
-    }
+    // Obtener el token de acceso de las cookies
+    const accessToken = cookieStore.get("sb-access-token")?.value
 
-    // 2. Si no hay sesión de NextAuth, intentar con Supabase
-    if (!userEmail) {
-      const cookieStore = cookies()
-      const supabaseClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name) {
-              return cookieStore.get(name)?.value
-            },
-          },
-        },
-      )
-
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser()
-      if (user?.email) {
-        userEmail = user.email
-        console.log("Email obtenido de Supabase:", userEmail)
-      }
-    }
-
-    // Si no hay email en ninguna fuente, no hay sesión
-    if (!userEmail) {
-      console.log("No se encontró sesión de usuario en ninguna fuente")
+    if (!accessToken) {
+      console.log("No se encontró token de acceso")
       return NextResponse.json({ error: "No autorizado. Debe iniciar sesión." }, { status: 401 })
     }
 
     // Crear cliente de Supabase con la clave de servicio
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const adminSupabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
+    // Obtener información del usuario desde el token
+    const {
+      data: { user },
+      error: userError,
+    } = await adminSupabase.auth.getUser(accessToken)
+
+    if (userError || !user) {
+      console.log("Error al obtener usuario:", userError)
+      return NextResponse.json({ error: "No autorizado. Debe iniciar sesión." }, { status: 401 })
+    }
 
     // Obtener el rol del usuario actual
-    const { data: currentUserData, error: currentUserError } = await supabase
+    const { data: currentUserData, error: roleError } = await adminSupabase
       .from("users")
       .select("role")
-      .eq("email", userEmail)
+      .eq("email", user.email)
       .single()
 
-    if (currentUserError) {
-      console.error("Error al obtener el rol del usuario:", currentUserError)
+    if (roleError) {
+      console.error("Error al obtener el rol del usuario:", roleError)
       return NextResponse.json({ error: "Error al verificar permisos" }, { status: 500 })
     }
 
@@ -75,7 +57,7 @@ export async function GET() {
     }
 
     // Obtener todos los usuarios
-    const { data: users, error: usersError } = await supabase
+    const { data: users, error: usersError } = await adminSupabase
       .from("users")
       .select("id, email, name, image, role, username")
       .order("role", { ascending: false })
