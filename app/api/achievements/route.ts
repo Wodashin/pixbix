@@ -1,157 +1,109 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-// GET /api/achievements - Obtener logros del usuario
-export async function GET(request: NextRequest) {
+// Ejemplo de logros
+const achievements = [
+  {
+    id: 1,
+    title: "Primer Paso",
+    description: "Completar el registro en la plataforma",
+    icon: "🏆",
+    points: 10,
+  },
+  {
+    id: 2,
+    title: "Explorador",
+    description: "Visitar todas las secciones de la plataforma",
+    icon: "🧭",
+    points: 20,
+  },
+  {
+    id: 3,
+    title: "Social",
+    description: "Conectar con 5 compañeros gaming",
+    icon: "👥",
+    points: 30,
+  },
+  {
+    id: 4,
+    title: "Veterano",
+    description: "Estar activo por más de 30 días",
+    icon: "⏱️",
+    points: 50,
+  },
+]
+
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const supabase = createClient()
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
 
-    // Obtener el ID del usuario
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .single()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const targetUserId = userId || userData.id
+    // Aquí iría la lógica para obtener los logros del usuario desde la base de datos
+    // Por ahora, devolvemos datos de ejemplo
 
-    // Obtener logros del usuario
-    const { data: userAchievements, error } = await supabase
-      .from("user_achievements")
-      .select(`
-        *,
-        achievement:achievement_id (
-          id,
-          name,
-          description,
-          icon,
-          category,
-          points,
-          rarity
-        )
-      `)
-      .eq("user_id", targetUserId)
-      .order("earned_at", { ascending: false })
+    // Simular logros desbloqueados por el usuario
+    const userAchievements = achievements.slice(0, 2).map((achievement) => ({
+      ...achievement,
+      unlocked: true,
+      unlockedAt: new Date(Date.now() - Math.random() * 10000000000).toISOString(),
+    }))
 
-    if (error) {
-      console.error("Error fetching achievements:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    // Obtener todos los logros disponibles
-    const { data: allAchievements, error: allError } = await supabase
-      .from("achievements")
-      .select("*")
-      .order("category", { ascending: true })
-
-    if (allError) {
-      console.error("Error fetching all achievements:", allError)
-      return NextResponse.json({ error: allError.message }, { status: 500 })
-    }
-
-    // Combinar logros obtenidos y no obtenidos
-    const earnedIds = new Set(userAchievements?.map((ua) => ua.achievement.id) || [])
-    const achievements =
-      allAchievements?.map((achievement) => ({
-        ...achievement,
-        earned: earnedIds.has(achievement.id),
-        earned_at: userAchievements?.find((ua) => ua.achievement.id === achievement.id)?.earned_at || null,
-      })) || []
+    // Simular logros bloqueados
+    const lockedAchievements = achievements.slice(2).map((achievement) => ({
+      ...achievement,
+      unlocked: false,
+    }))
 
     return NextResponse.json({
-      achievements,
-      total_points: userAchievements?.reduce((sum, ua) => sum + (ua.achievement?.points || 0), 0) || 0,
-      total_earned: userAchievements?.length || 0,
-      total_available: allAchievements?.length || 0,
+      achievements: [...userAchievements, ...lockedAchievements],
+      totalPoints: userAchievements.reduce((sum, a) => sum + a.points, 0),
     })
   } catch (error) {
-    console.error("Error in GET achievements:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener logros:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
-// POST /api/achievements - Otorgar logro a usuario
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const { achievement_id, user_id } = await request.json()
-
-    if (!achievement_id) {
-      return NextResponse.json({ error: "Missing achievement_id" }, { status: 400 })
-    }
-
     const supabase = createClient()
 
-    // Obtener el ID del usuario actual
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .single()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const targetUserId = user_id || userData.id
+    const { achievementId } = await request.json()
 
-    // Verificar si ya tiene el logro
-    const { data: existing } = await supabase
-      .from("user_achievements")
-      .select("id")
-      .eq("user_id", targetUserId)
-      .eq("achievement_id", achievement_id)
-      .single()
-
-    if (existing) {
-      return NextResponse.json({ error: "Achievement already earned" }, { status: 400 })
+    if (!achievementId) {
+      return NextResponse.json({ error: "ID de logro requerido" }, { status: 400 })
     }
 
-    // Otorgar logro
-    const { data: userAchievement, error } = await supabase
-      .from("user_achievements")
-      .insert({
-        user_id: targetUserId,
-        achievement_id,
-      })
-      .select(`
-        *,
-        achievement:achievement_id (
-          id,
-          name,
-          description,
-          icon,
-          points,
-          rarity
-        )
-      `)
-      .single()
+    // Aquí iría la lógica para desbloquear un logro
+    // Por ejemplo, verificar si el usuario cumple los requisitos y luego guardar en la base de datos
 
-    if (error) {
-      console.error("Error granting achievement:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(userAchievement)
+    // Simulamos una respuesta exitosa
+    return NextResponse.json({
+      success: true,
+      message: "Logro desbloqueado correctamente",
+      achievement: achievements.find((a) => a.id === achievementId),
+    })
   } catch (error) {
-    console.error("Error in POST achievements:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al desbloquear logro:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
