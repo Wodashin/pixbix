@@ -1,14 +1,47 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { createClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
 
 export async function GET() {
   try {
-    // Verificar la sesión del usuario
-    const session = await getServerSession()
+    // Obtener email del usuario de diferentes fuentes
+    let userEmail = null
 
-    if (!session?.user?.email) {
-      console.log("No hay sesión de usuario")
+    // 1. Intentar obtener email desde NextAuth
+    const session = await getServerSession()
+    if (session?.user?.email) {
+      userEmail = session.user.email
+      console.log("Email obtenido de NextAuth:", userEmail)
+    }
+
+    // 2. Si no hay sesión de NextAuth, intentar con Supabase
+    if (!userEmail) {
+      const cookieStore = cookies()
+      const supabaseClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name) {
+              return cookieStore.get(name)?.value
+            },
+          },
+        },
+      )
+
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser()
+      if (user?.email) {
+        userEmail = user.email
+        console.log("Email obtenido de Supabase:", userEmail)
+      }
+    }
+
+    // Si no hay email en ninguna fuente, no hay sesión
+    if (!userEmail) {
+      console.log("No se encontró sesión de usuario en ninguna fuente")
       return NextResponse.json({ error: "No autorizado. Debe iniciar sesión." }, { status: 401 })
     }
 
@@ -19,7 +52,7 @@ export async function GET() {
     const { data: currentUserData, error: currentUserError } = await supabase
       .from("users")
       .select("role")
-      .eq("email", session.user.email)
+      .eq("email", userEmail)
       .single()
 
     if (currentUserError) {
