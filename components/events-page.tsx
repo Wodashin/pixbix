@@ -1,374 +1,165 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, MapPin, Users, Trophy, Plus } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Send, Users } from "lucide-react"
 import { useAuth } from "@/components/auth-provider-supabase"
 
-interface Event {
-  id: number
-  title: string
-  date: string
-  time: string
-  location: string
-  participants: string
-  prize: string
-  game: string
-  status: string
-  description?: string
+interface ChatMessage {
+  id: string
+  content: string
+  author: {
+    name: string
+    avatar?: string
+  }
+  timestamp: string
 }
 
-export function EventsPage() {
+export function GlobalChat() {
   const { user } = useAuth()
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("upcoming")
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [newMessage, setNewMessage] = useState("")
+  const [onlineUsers, setOnlineUsers] = useState(42)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
 
   useEffect(() => {
-    fetchEvents()
+    scrollToBottom()
+  }, [messages])
+
+  useEffect(() => {
+    // Simular mensajes iniciales
+    const initialMessages: ChatMessage[] = [
+      {
+        id: "1",
+        content: "¡Hola a todos! ¿Alguien quiere jugar Valorant?",
+        author: { name: "GamerPro", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+      },
+      {
+        id: "2",
+        content: "¡Yo me apunto! ¿Qué rango eres?",
+        author: { name: "PixelHunter", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 240000).toISOString(),
+      },
+      {
+        id: "3",
+        content: "Diamante 2, ¿y tú?",
+        author: { name: "GamerPro", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 180000).toISOString(),
+      },
+    ]
+    setMessages(initialMessages)
   }, [])
 
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch("/api/events")
-      const data = await response.json()
-      setEvents(data.events || [])
-    } catch (error) {
-      console.error("Error al cargar eventos:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !user) return
 
-  const handleJoinEvent = async (eventId: number) => {
-    if (!user) {
-      // Redirigir a login
-      window.location.href = "/login"
-      return
+    const message: ChatMessage = {
+      id: Date.now().toString(),
+      content: newMessage,
+      author: {
+        name: user.user_metadata?.name || user.email || "Usuario",
+        avatar: user.user_metadata?.avatar_url,
+      },
+      timestamp: new Date().toISOString(),
     }
 
+    setMessages((prev) => [...prev, message])
+    setNewMessage("")
+
+    // Aquí iría la lógica para enviar el mensaje al servidor
     try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
+      await fetch("/api/chat/messages", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ content: newMessage }),
       })
-
-      if (response.ok) {
-        // Actualizar la lista de eventos
-        fetchEvents()
-      }
     } catch (error) {
-      console.error("Error al unirse al evento:", error)
+      console.error("Error al enviar mensaje:", error)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-slate-400">Cargando eventos...</p>
-        </div>
-      </div>
-    )
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Eventos Gaming</h1>
-          <p className="text-xl text-slate-400">Únete a los eventos más emocionantes de la comunidad</p>
+    <Card className="bg-slate-800 border-slate-700 h-[600px] flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-white flex items-center justify-between">
+          <span>Chat Global</span>
+          <div className="flex items-center text-sm text-slate-400">
+            <Users className="h-4 w-4 mr-1" />
+            {onlineUsers} en línea
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col p-0">
+        {/* Área de mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
+            <div key={message.id} className="flex space-x-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={message.author.avatar || "/placeholder.svg"} />
+                <AvatarFallback>{message.author.name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="font-semibold text-white text-sm">{message.author.name}</span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(message.timestamp).toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <p className="text-slate-300 text-sm">{message.content}</p>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
-        {user && (
-          <Button className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Crear Evento
-          </Button>
-        )}
-      </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800 border-slate-700">
-          <TabsTrigger value="upcoming" className="data-[state=active]:bg-purple-600">
-            Próximos
-          </TabsTrigger>
-          <TabsTrigger value="live" className="data-[state=active]:bg-purple-600">
-            En Vivo
-          </TabsTrigger>
-          <TabsTrigger value="past" className="data-[state=active]:bg-purple-600">
-            Pasados
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="upcoming" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <Card key={event.id} className="bg-slate-800 border-slate-700 hover:border-purple-500 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge
-                      className={`${
-                        event.status === "Registrándose"
-                          ? "bg-green-600"
-                          : event.status === "Próximamente"
-                            ? "bg-yellow-600"
-                            : "bg-blue-600"
-                      }`}
-                    >
-                      {event.status}
-                    </Badge>
-                    <span className="text-slate-400 text-sm">{event.game}</span>
-                  </div>
-                  <CardTitle className="text-white text-xl">{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(event.date).toLocaleDateString("es-ES")} a las {event.time}
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {event.location}
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Users className="h-4 w-4 mr-2" />
-                      {event.participants} participantes
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Premio: {event.prize}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => handleJoinEvent(event.id)}
-                    className={`w-full ${
-                      event.status === "Registrándose"
-                        ? "bg-cyan-600 hover:bg-cyan-700"
-                        : "bg-slate-600 hover:bg-slate-700"
-                    }`}
-                    disabled={event.status !== "Registrándose"}
-                  >
-                    {event.status === "Registrándose"
-                      ? user
-                        ? "Registrarse Ahora"
-                        : "Inicia sesión para registrarte"
-                      : event.status === "Próximamente"
-                        ? "Notificarme"
-                        : "Ver Detalles"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="live" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-white mb-2">No hay eventos en vivo</h3>
-            <p className="text-slate-400">Los eventos que estén transmitiendo en vivo aparecerán aquí</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="past" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-white mb-2">Eventos Pasados</h3>
-            <p className="text-slate-400">Aquí podrás ver los resultados de eventos anteriores</p>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-"use client"
-
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, MapPin, Users, Trophy, Plus } from "lucide-react"
-import { useAuth } from "@/components/auth-provider-supabase"
-
-interface Event {
-  id: number
-  title: string
-  date: string
-  time: string
-  location: string
-  participants: string
-  prize: string
-  game: string
-  status: string
-  description?: string
-}
-
-export function EventsPage() {
-  const { user } = useAuth()
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("upcoming")
-
-  useEffect(() => {
-    fetchEvents()
-  }, [])
-
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch("/api/events")
-      const data = await response.json()
-      setEvents(data.events || [])
-    } catch (error) {
-      console.error("Error al cargar eventos:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleJoinEvent = async (eventId: number) => {
-    if (!user) {
-      // Redirigir a login
-      window.location.href = "/login"
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/events/${eventId}/join`, {
-        method: "POST",
-      })
-
-      if (response.ok) {
-        // Actualizar la lista de eventos
-        fetchEvents()
-      }
-    } catch (error) {
-      console.error("Error al unirse al evento:", error)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-slate-400">Cargando eventos...</p>
+        {/* Área de entrada */}
+        <div className="border-t border-slate-700 p-4">
+          {user ? (
+            <div className="flex space-x-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Escribe un mensaje..."
+                className="bg-slate-700 border-slate-600 text-slate-100"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-slate-400 text-sm">Inicia sesión para participar en el chat</p>
+            </div>
+          )}
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Eventos Gaming</h1>
-          <p className="text-xl text-slate-400">Únete a los eventos más emocionantes de la comunidad</p>
-        </div>
-        {user && (
-          <Button className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Crear Evento
-          </Button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800 border-slate-700">
-          <TabsTrigger value="upcoming" className="data-[state=active]:bg-purple-600">
-            Próximos
-          </TabsTrigger>
-          <TabsTrigger value="live" className="data-[state=active]:bg-purple-600">
-            En Vivo
-          </TabsTrigger>
-          <TabsTrigger value="past" className="data-[state=active]:bg-purple-600">
-            Pasados
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="upcoming" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
-              <Card key={event.id} className="bg-slate-800 border-slate-700 hover:border-purple-500 transition-colors">
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <Badge
-                      className={`${
-                        event.status === "Registrándose"
-                          ? "bg-green-600"
-                          : event.status === "Próximamente"
-                            ? "bg-yellow-600"
-                            : "bg-blue-600"
-                      }`}
-                    >
-                      {event.status}
-                    </Badge>
-                    <span className="text-slate-400 text-sm">{event.game}</span>
-                  </div>
-                  <CardTitle className="text-white text-xl">{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(event.date).toLocaleDateString("es-ES")} a las {event.time}
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {event.location}
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Users className="h-4 w-4 mr-2" />
-                      {event.participants} participantes
-                    </div>
-                    <div className="flex items-center text-slate-300 text-sm">
-                      <Trophy className="h-4 w-4 mr-2" />
-                      Premio: {event.prize}
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={() => handleJoinEvent(event.id)}
-                    className={`w-full ${
-                      event.status === "Registrándose"
-                        ? "bg-cyan-600 hover:bg-cyan-700"
-                        : "bg-slate-600 hover:bg-slate-700"
-                    }`}
-                    disabled={event.status !== "Registrándose"}
-                  >
-                    {event.status === "Registrándose"
-                      ? user
-                        ? "Registrarse Ahora"
-                        : "Inicia sesión para registrarte"
-                      : event.status === "Próximamente"
-                        ? "Notificarme"
-                        : "Ver Detalles"}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="live" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-white mb-2">No hay eventos en vivo</h3>
-            <p className="text-slate-400">Los eventos que estén transmitiendo en vivo aparecerán aquí</p>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="past" className="mt-6">
-          <div className="text-center py-12">
-            <h3 className="text-xl font-semibold text-white mb-2">Eventos Pasados</h3>
-            <p className="text-slate-400">Aquí podrás ver los resultados de eventos anteriores</p>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
