@@ -5,33 +5,26 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useSession } from "next-auth/react"
-import { formatDistanceToNow } from "date-fns"
-import { es } from "date-fns/locale"
-import { Send, MessageCircle, Users } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Send, Users } from "lucide-react"
+import { useAuth } from "@/components/auth-provider-supabase"
 
 interface ChatMessage {
   id: string
-  message: string
-  created_at: string
-  user: {
-    id: string
+  content: string
+  author: {
     name: string
-    username: string
-    display_name: string
-    avatar_url: string
+    avatar?: string
   }
+  timestamp: string
 }
 
 export function GlobalChat() {
-  const { data: session } = useSession()
+  const { user } = useAuth()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSending, setIsSending] = useState(false)
-  const [onlineUsers, setOnlineUsers] = useState(42) // Simulado por ahora
+  const [onlineUsers, setOnlineUsers] = useState(42)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -39,133 +32,133 @@ export function GlobalChat() {
   }
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const response = await fetch("/api/chat/messages?limit=50")
-        if (response.ok) {
-          const data = await response.json()
-          setMessages(data)
-        }
-      } catch (error) {
-        console.error("Error fetching messages:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchMessages()
-
-    // Polling cada 3 segundos para nuevos mensajes
-    const interval = setInterval(fetchMessages, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  useEffect(() => {
     scrollToBottom()
   }, [messages])
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newMessage.trim() || !session || isSending) return
+  useEffect(() => {
+    // Simular mensajes iniciales
+    const initialMessages: ChatMessage[] = [
+      {
+        id: "1",
+        content: "¡Hola a todos! ¿Alguien quiere jugar Valorant?",
+        author: { name: "GamerPro", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+      },
+      {
+        id: "2",
+        content: "¡Yo me apunto! ¿Qué rango eres?",
+        author: { name: "PixelHunter", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 240000).toISOString(),
+      },
+      {
+        id: "3",
+        content: "Diamante 2, ¿y tú?",
+        author: { name: "GamerPro", avatar: "/placeholder.svg?height=32&width=32" },
+        timestamp: new Date(Date.now() - 180000).toISOString(),
+      },
+    ]
+    setMessages(initialMessages)
+  }, [])
 
-    setIsSending(true)
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !user) return
+
+    const message: ChatMessage = {
+      id: Date.now().toString(),
+      content: newMessage,
+      author: {
+        name: user.user_metadata?.name || user.email || "Usuario",
+        avatar: user.user_metadata?.avatar_url,
+      },
+      timestamp: new Date().toISOString(),
+    }
+
+    setMessages((prev) => [...prev, message])
+    setNewMessage("")
+
+    // Aquí iría la lógica para enviar el mensaje al servidor
     try {
-      const response = await fetch("/api/chat/messages", {
+      await fetch("/api/chat/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: newMessage,
-        }),
+        body: JSON.stringify({ content: newMessage }),
       })
-
-      if (response.ok) {
-        const message = await response.json()
-        setMessages([...messages, message])
-        setNewMessage("")
-      }
     } catch (error) {
-      console.error("Error sending message:", error)
-    } finally {
-      setIsSending(false)
+      console.error("Error al enviar mensaje:", error)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
     }
   }
 
   return (
     <Card className="bg-slate-800 border-slate-700 h-[600px] flex flex-col">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-white">
-          <div className="flex items-center space-x-2">
-            <MessageCircle className="h-5 w-5 text-cyan-500" />
-            <span>Chat Global</span>
-          </div>
-          <div className="flex items-center space-x-1 text-sm text-slate-400">
-            <Users className="h-4 w-4" />
-            <span>{onlineUsers} online</span>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+        <CardTitle className="text-white flex items-center justify-between">
+          <span>Chat Global</span>
+          <div className="flex items-center text-sm text-slate-400">
+            <Users className="h-4 w-4 mr-1" />
+            {onlineUsers} en línea
           </div>
         </CardTitle>
       </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col p-4 space-y-4">
+      <CardContent className="flex-1 flex flex-col p-0">
         {/* Área de mensajes */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">Cargando chat...</p>
-            </div>
-          ) : messages.length > 0 ? (
-            messages.map((message) => (
-              <div key={message.id} className="flex items-start space-x-3">
-                <Avatar className="h-8 w-8 flex-shrink-0">
-                  <AvatarImage src={message.user?.avatar_url || ""} />
-                  <AvatarFallback className="text-xs">{message.user?.display_name?.[0] || "U"}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-semibold text-white text-sm">
-                      {message.user?.display_name || message.user?.username || "Usuario"}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {formatDistanceToNow(new Date(message.created_at), {
-                        addSuffix: true,
-                        locale: es,
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-slate-300 text-sm break-words">{message.message}</p>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
+            <div key={message.id} className="flex space-x-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={message.author.avatar || "/placeholder.svg"} />
+                <AvatarFallback>{message.author.name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="font-semibold text-white text-sm">{message.author.name}</span>
+                  <span className="text-xs text-slate-400">
+                    {new Date(message.timestamp).toLocaleTimeString("es-ES", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
+                <p className="text-slate-300 text-sm">{message.content}</p>
               </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-slate-400">No hay mensajes aún. ¡Sé el primero en escribir!</p>
             </div>
-          )}
+          ))}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Formulario de envío */}
-        {session ? (
-          <form onSubmit={handleSendMessage} className="flex space-x-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Escribe un mensaje..."
-              maxLength={500}
-              className="flex-1 bg-slate-700 border-slate-600 text-slate-100"
-              disabled={isSending}
-            />
-            <Button type="submit" disabled={!newMessage.trim() || isSending} className="bg-cyan-600 hover:bg-cyan-700">
-              {isSending ? "..." : <Send className="h-4 w-4" />}
-            </Button>
-          </form>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-slate-400 text-sm">Inicia sesión para participar en el chat</p>
-          </div>
-        )}
+        {/* Área de entrada */}
+        <div className="border-t border-slate-700 p-4">
+          {user ? (
+            <div className="flex space-x-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Escribe un mensaje..."
+                className="bg-slate-700 border-slate-600 text-slate-100"
+              />
+              <Button
+                onClick={handleSendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-slate-400 text-sm">Inicia sesión para participar en el chat</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
