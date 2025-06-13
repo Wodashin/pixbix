@@ -10,6 +10,7 @@ type AuthContextType = {
   loading: boolean
   signIn: (provider: "google" | "discord") => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
 }
 
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: async () => {},
   signInWithEmail: async () => ({ error: null }),
+  signUp: async () => ({ error: null }),
   signOut: async () => {},
 })
 
@@ -118,6 +120,23 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
     return { error }
   }
 
+  const signUp = async (email: string, password: string) => {
+    console.log("Registrando nuevo usuario...")
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      console.error("Error en registro:", error)
+    }
+
+    return { error }
+  }
+
   const signOut = async () => {
     console.log("Cerrando sesión...")
     const { error } = await supabase.auth.signOut()
@@ -128,7 +147,9 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signInWithEmail, signOut }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, signIn, signInWithEmail, signUp, signOut }}>
+      {children}
+    </AuthContext.Provider>
   )
 }
 
