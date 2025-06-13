@@ -1,71 +1,74 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth/next"
-import { createClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
+import { createClient } from "@/utils/supabase/server"
 
 export async function GET() {
   try {
-    // Recopilar información de depuración
-    const debug = {
-      nextauth: null,
-      supabase: null,
-      cookies: [],
-    }
+    const cookieStore = cookies()
+    const supabase = createClient()
 
-    // 1. Verificar sesión de NextAuth
-    try {
-      const session = await getServerSession()
-      debug.nextauth = {
+    // Obtener sesión de Supabase
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
+
+    // Listar cookies (solo nombres por seguridad)
+    const cookieList = cookieStore.getAll().map((cookie) => cookie.name)
+
+    return NextResponse.json({
+      supabase: {
         hasSession: !!session,
         user: session?.user
           ? {
+              id: session.user.id,
               email: session.user.email,
-              name: session.user.name,
-              image: session.user.image,
+              metadata: session.user.user_metadata,
             }
           : null,
-      }
-    } catch (error) {
-      debug.nextauth = { error: "Error al obtener sesión de NextAuth" }
-    }
-
-    // 2. Verificar sesión de Supabase
-    try {
-      const cookieStore = cookies()
-      const supabaseClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name) {
-              return cookieStore.get(name)?.value
-            },
-          },
-        },
-      )
-
-      const { data, error } = await supabaseClient.auth.getSession()
-      debug.supabase = {
-        hasSession: !!data.session,
-        user: data.session?.user
-          ? {
-              email: data.session.user.email,
-              id: data.session.user.id,
-            }
-          : null,
-        error: error ? error.message : null,
-      }
-    } catch (error) {
-      debug.supabase = { error: "Error al obtener sesión de Supabase" }
-    }
-
-    // 3. Listar cookies (solo nombres por seguridad)
-    const cookieStore = cookies()
-    debug.cookies = cookieStore.getAll().map((cookie) => cookie.name)
-
-    return NextResponse.json(debug)
+        error: error?.message,
+      },
+      cookies: cookieList,
+    })
   } catch (error) {
-    console.error("Error en la API de estado de autenticación:", error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    console.error("Error en debug:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  }
+}
+import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
+import { createClient } from "@/utils/supabase/server"
+
+export async function GET() {
+  try {
+    const cookieStore = cookies()
+    const supabase = createClient()
+
+    // Obtener sesión de Supabase
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
+
+    // Listar cookies (solo nombres por seguridad)
+    const cookieList = cookieStore.getAll().map((cookie) => cookie.name)
+
+    return NextResponse.json({
+      supabase: {
+        hasSession: !!session,
+        user: session?.user
+          ? {
+              id: session.user.id,
+              email: session.user.email,
+              metadata: session.user.user_metadata,
+            }
+          : null,
+        error: error?.message,
+      },
+      cookies: cookieList,
+    })
+  } catch (error) {
+    console.error("Error en debug:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
