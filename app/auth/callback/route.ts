@@ -1,4 +1,4 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
@@ -8,8 +8,15 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-    await supabase.auth.exchangeCodeForSession(code)
+    const supabase = createClient()
+
+    // Exchange the code for a session
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (error) {
+      console.error("Error exchanging code for session:", error)
+      return NextResponse.redirect(new URL("/login?error=auth", request.url))
+    }
 
     // Después de autenticar, redirigir a la página principal
     return NextResponse.redirect(new URL("/", request.url))
