@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -11,12 +13,16 @@ import { Gamepad2, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useAuth } from "@/components/auth-provider-supabase"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isManualLogin, setIsManualLogin] = useState(false)
-  const { signIn } = useAuth()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [errorMessage, setErrorMessage] = useState("")
+  const { signIn, signInWithEmail } = useAuth()
+  const router = useRouter()
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
@@ -24,6 +30,7 @@ export default function LoginPage() {
       await signIn("google")
     } catch (error) {
       console.error("Error en login con Google:", error)
+      setErrorMessage("Error al iniciar sesión con Google")
       setIsLoading(false)
     }
   }
@@ -34,15 +41,32 @@ export default function LoginPage() {
       await signIn("discord")
     } catch (error) {
       console.error("Error en login con Discord:", error)
+      setErrorMessage("Error al iniciar sesión con Discord")
       setIsLoading(false)
     }
   }
 
-  const handleManualLogin = async (formData: FormData) => {
-    setIsManualLogin(true)
-    // Aquí iría la lógica de login manual con email/password
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulación
-    setIsManualLogin(false)
+  const handleManualLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage("")
+    setIsLoading(true)
+
+    try {
+      const { error } = await signInWithEmail(email, password)
+
+      if (error) {
+        setErrorMessage(
+          error.message === "Invalid login credentials" ? "Email o contraseña incorrectos" : error.message,
+        )
+      } else {
+        router.push("/")
+      }
+    } catch (error) {
+      console.error("Error inesperado:", error)
+      setErrorMessage("Error al iniciar sesión")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -106,7 +130,13 @@ export default function LoginPage() {
               <Separator className="bg-slate-600" />
 
               {/* Manual Login */}
-              <form action={handleManualLogin} className="space-y-4">
+              <form onSubmit={handleManualLogin} className="space-y-4">
+                {errorMessage && (
+                  <div className="bg-red-900/50 border border-red-800 text-red-300 px-4 py-2 rounded-md text-sm">
+                    {errorMessage}
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-300">
                     Email
@@ -115,10 +145,11 @@ export default function LoginPage() {
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <Input
                       id="email"
-                      name="email"
                       type="email"
                       placeholder="tu@email.com"
                       className="pl-10 bg-slate-700 border-slate-600 text-slate-100"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -132,10 +163,11 @@ export default function LoginPage() {
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                     <Input
                       id="password"
-                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       className="pl-10 pr-10 bg-slate-700 border-slate-600 text-slate-100"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                       required
                     />
                     <button
@@ -156,8 +188,8 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isManualLogin}>
-                  {isManualLogin ? "Iniciando sesión..." : "Iniciar Sesión"}
+                <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700" disabled={isLoading}>
+                  {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
               </form>
 
