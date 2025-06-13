@@ -1,146 +1,87 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-// GET /api/posts/[id]/comments - Obtener comentarios de un post
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    console.log("Comments GET API - Starting...")
-
     const postId = params.id
-    const supabase = createClient()
 
-    const { data: comments, error } = await supabase
-      .from("comments")
-      .select(`
-        *,
-        user:user_id (
-          id,
-          name,
-          username,
-          display_name,
-          avatar_url
-        )
-      `)
-      .eq("post_id", postId)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("Comments GET API - Error fetching comments:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (!postId) {
+      return NextResponse.json({ error: "ID de post requerido" }, { status: 400 })
     }
 
-    console.log("Comments GET API - Comments found:", comments?.length || 0)
-    return NextResponse.json(comments)
+    // Aquí iría la lógica para obtener comentarios del post
+    // Por ahora, devolvemos datos de ejemplo
+    const comments = [
+      {
+        id: "1",
+        content: "¡Gran post! Me encantó la información.",
+        author: {
+          name: "Usuario1",
+          avatar: "/placeholder.svg?height=40&width=40",
+        },
+        timestamp: new Date(Date.now() - 300000).toISOString(),
+        likes: 5,
+      },
+      {
+        id: "2",
+        content: "Muy interesante, gracias por compartir.",
+        author: {
+          name: "Usuario2",
+          avatar: "/placeholder.svg?height=40&width=40",
+        },
+        timestamp: new Date(Date.now() - 600000).toISOString(),
+        likes: 3,
+      },
+    ]
+
+    return NextResponse.json({ comments })
   } catch (error) {
-    console.error("Comments GET API - General error:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener comentarios:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
-// POST /api/posts/[id]/comments - Crear un comentario
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    console.log("Comments POST API - Starting...")
-
-    // Método 1: Intentar obtener la sesión de NextAuth
-    const session = await getServerSession(authOptions)
-    console.log("Comments POST API - NextAuth Session:", session?.user?.email)
-
-    // Método 2: Si no hay sesión de NextAuth, intentar con headers personalizados
-    let userEmail = session?.user?.email
-
-    if (!userEmail) {
-      const customEmail = request.headers.get("x-user-email")
-      if (customEmail) {
-        userEmail = customEmail
-        console.log("Comments POST API - Using custom header email:", userEmail)
-      }
-    }
-
-    // Método 3: Intentar obtener email desde Supabase directamente
-    if (!userEmail) {
-      const supabase = createClient()
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser()
-      if (user?.email) {
-        userEmail = user.email
-        console.log("Comments POST API - Using Supabase user email:", userEmail)
-      }
-    }
-
-    if (!userEmail) {
-      console.log("Comments POST API - No user email found with any method")
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    console.log("Comments POST API - Final auth result:")
-    console.log("- User Email:", userEmail)
-
     const postId = params.id
     const { content } = await request.json()
 
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
-      console.log("Comments POST API - Invalid content")
-      return NextResponse.json({ error: "Content is required" }, { status: 400 })
+    if (!postId) {
+      return NextResponse.json({ error: "ID de post requerido" }, { status: 400 })
+    }
+
+    if (!content) {
+      return NextResponse.json({ error: "Contenido del comentario requerido" }, { status: 400 })
     }
 
     const supabase = createClient()
 
-    // Obtener el ID del usuario
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", userEmail)
-      .single()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (userError || !userData) {
-      console.error("Comments POST API - Error getting user:", userError)
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    console.log("Comments POST API - User found:", userData.id)
-
-    // Crear el comentario
-    const { data: comment, error } = await supabase
-      .from("comments")
-      .insert({
-        post_id: postId,
-        user_id: userData.id,
-        content: content.trim(),
-      })
-      .select(`
-        *,
-        user:user_id (
-          id,
-          name,
-          username,
-          display_name,
-          avatar_url
-        )
-      `)
-      .single()
-
-    if (error) {
-      console.error("Comments POST API - Error creating comment:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // Aquí iría la lógica para guardar el comentario en la base de datos
+    // Por ahora, simulamos una respuesta exitosa
+    const comment = {
+      id: Date.now().toString(),
+      content,
+      author: {
+        name: user.user_metadata?.name || user.email || "Usuario",
+        avatar: user.user_metadata?.avatar_url,
+      },
+      timestamp: new Date().toISOString(),
+      likes: 0,
     }
 
-    console.log("Comments POST API - Comment created successfully")
-
-    // Actualizar el contador de comentarios del post (opcional)
-    try {
-      await supabase.rpc("increment_comments_count", { post_id: postId })
-    } catch (rpcError) {
-      console.log("Comments POST API - RPC function not found, skipping counter update")
-    }
-
-    return NextResponse.json(comment)
+    return NextResponse.json({ comment })
   } catch (error) {
-    console.error("Comments POST API - General error:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al crear comentario:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
