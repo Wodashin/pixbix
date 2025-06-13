@@ -1,100 +1,120 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-// GET /api/notifications - Obtener notificaciones del usuario
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const supabase = createClient()
-    const { searchParams } = new URL(request.url)
-    const limit = Number.parseInt(searchParams.get("limit") || "20")
 
-    // Obtener el ID del usuario
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .single()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const { data: notifications, error } = await supabase
-      .from("notifications")
-      .select(`
-        *,
-        from_user:from_user_id (
-          id,
-          name,
-          username,
-          display_name,
-          avatar_url
-        )
-      `)
-      .eq("user_id", userData.id)
-      .order("created_at", { ascending: false })
-      .limit(limit)
+    // Aquí iría la lógica para obtener notificaciones del usuario
+    // Por ahora, devolvemos datos de ejemplo
+    const notifications = [
+      {
+        id: "1",
+        type: "friend_request",
+        title: "Nueva solicitud de amistad",
+        message: "GamerPro_2024 quiere ser tu amigo",
+        read: false,
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+      },
+      {
+        id: "2",
+        type: "event_reminder",
+        title: "Recordatorio de evento",
+        message: "El torneo de Valorant comienza en 1 hora",
+        read: true,
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: "3",
+        type: "achievement",
+        title: "¡Logro desbloqueado!",
+        message: "Has completado tu primer mes en la plataforma",
+        read: false,
+        timestamp: new Date(Date.now() - 172800000).toISOString(),
+      },
+    ]
 
-    if (error) {
-      console.error("Error fetching notifications:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json(notifications || [])
+    return NextResponse.json({ notifications })
   } catch (error) {
-    console.error("Error in GET notifications:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al obtener notificaciones:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
-// PATCH /api/notifications - Marcar notificaciones como leídas
-export async function PATCH(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const { notificationId } = await request.json()
 
-    const { notificationIds } = await request.json()
-
-    if (!Array.isArray(notificationIds)) {
-      return NextResponse.json({ error: "Invalid notification IDs" }, { status: 400 })
+    if (!notificationId) {
+      return NextResponse.json({ error: "ID de notificación requerido" }, { status: 400 })
     }
 
     const supabase = createClient()
 
-    // Obtener el ID del usuario
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .single()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (userError || !userData) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read: true })
-      .eq("user_id", userData.id)
-      .in("id", notificationIds)
+    // Aquí iría la lógica para marcar la notificación como leída
+    // Por ahora, simulamos una respuesta exitosa
 
-    if (error) {
-      console.error("Error marking notifications as read:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: "Notificación marcada como leída",
+      notificationId,
+    })
   } catch (error) {
-    console.error("Error in PATCH notifications:", error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+    console.error("Error al actualizar notificación:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { notificationId } = await request.json()
+
+    if (!notificationId) {
+      return NextResponse.json({ error: "ID de notificación requerido" }, { status: 400 })
+    }
+
+    const supabase = createClient()
+
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    // Aquí iría la lógica para eliminar la notificación
+    // Por ahora, simulamos una respuesta exitosa
+
+    return NextResponse.json({
+      success: true,
+      message: "Notificación eliminada correctamente",
+      notificationId,
+    })
+  } catch (error) {
+    console.error("Error al eliminar notificación:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
