@@ -1,5 +1,5 @@
-import type { NextRequest } from "next/server"
-import { updateSession } from "@/utils/supabase/middleware"
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
   // Rutas públicas que no requieren autenticación
@@ -14,31 +14,57 @@ export async function middleware(request: NextRequest) {
     "/noticias",
     "/eventos",
     "/marketplace",
+    "/debug",
   ]
 
   // Verificar si la ruta actual es pública
   const url = request.nextUrl.pathname
   const isPublicRoute = publicRoutes.some(
-    (route) => url === route || url.startsWith("/api/") || url.startsWith("/_next/"),
+    (route) => url === route || url.startsWith("/api/") || url.startsWith("/_next/") || url.startsWith("/auth/"),
   )
 
-  // Si es una ruta pública, solo actualizar la sesión sin redireccionar
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+        },
+      },
+    },
+  )
+
+  // Obtener el usuario (esto actualiza la sesión automáticamente)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Si es una ruta pública, permitir acceso independientemente del estado de autenticación
   if (isPublicRoute) {
-    return await updateSession(request)
+    return supabaseResponse
   }
 
-  // Para rutas protegidas, actualizar sesión y verificar autenticación
-  const response = await updateSession(request)
-
-  // Obtener la URL de la respuesta para verificar si hubo redirección
-  const responseUrl = response.headers.get("location")
-
-  // Si hay redirección a login, significa que no hay sesión
-  if (responseUrl && responseUrl.includes("/login")) {
-    return response
+  // Para rutas protegidas, verificar si hay usuario
+  if (!user) {
+    // Redirigir a login si no hay usuario en ruta protegida
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    return NextResponse.redirect(url)
   }
 
-  return response
+  return supabaseResponse
 }
 
 export const config = {
