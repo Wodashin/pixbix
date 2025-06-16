@@ -2,14 +2,16 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Gamepad2, Mail, Lock, Eye, EyeOff } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Gamepad2, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { useAuth } from "@/components/auth-provider-supabase"
@@ -23,25 +25,48 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("")
   const { signIn, signInWithEmail } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Verificar si hay errores en la URL
+  useEffect(() => {
+    const error = searchParams.get("error")
+    if (error) {
+      switch (error) {
+        case "auth_error":
+          setErrorMessage("Error en la autenticación. Inténtalo de nuevo.")
+          break
+        case "unexpected_error":
+          setErrorMessage("Error inesperado. Por favor, inténtalo más tarde.")
+          break
+        case "no_code":
+          setErrorMessage("Error en el proceso de autenticación.")
+          break
+        default:
+          setErrorMessage("Error desconocido.")
+      }
+    }
+  }, [searchParams])
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
+    setErrorMessage("")
     try {
       await signIn("google")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en login con Google:", error)
-      setErrorMessage("Error al iniciar sesión con Google")
+      setErrorMessage(error.message || "Error al iniciar sesión con Google")
       setIsLoading(false)
     }
   }
 
   const handleDiscordLogin = async () => {
     setIsLoading(true)
+    setErrorMessage("")
     try {
       await signIn("discord")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error en login con Discord:", error)
-      setErrorMessage("Error al iniciar sesión con Discord")
+      setErrorMessage(error.message || "Error al iniciar sesión con Discord")
       setIsLoading(false)
     }
   }
@@ -85,6 +110,14 @@ export default function LoginPage() {
               <CardTitle className="text-white text-center">Iniciar Sesión</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Error Message */}
+              {errorMessage && (
+                <Alert className="border-red-800 bg-red-900/50">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-red-300">{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+
               {/* Social Login */}
               <div className="space-y-3">
                 <Button
@@ -137,12 +170,6 @@ export default function LoginPage() {
 
               {/* Manual Login */}
               <form onSubmit={handleManualLogin} className="space-y-4">
-                {errorMessage && (
-                  <div className="bg-red-900/50 border border-red-800 text-red-300 px-4 py-2 rounded-md text-sm">
-                    {errorMessage}
-                  </div>
-                )}
-
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-slate-300">
                     Email
@@ -203,6 +230,13 @@ export default function LoginPage() {
                 <span className="text-slate-400">¿No tienes cuenta? </span>
                 <Link href="/register" className="text-purple-400 hover:text-purple-300">
                   Regístrate aquí
+                </Link>
+              </div>
+
+              {/* Debug Info */}
+              <div className="text-center">
+                <Link href="/debug" className="text-xs text-slate-500 hover:text-slate-400">
+                  Ver información de debug
                 </Link>
               </div>
             </CardContent>
