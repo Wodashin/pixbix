@@ -93,10 +93,20 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
 
   const signIn = async (provider: "google" | "discord") => {
     console.log(`Iniciando login con ${provider}...`)
+
+    // Verificar que las variables de entorno estén configuradas
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      throw new Error("Configuración de Supabase incompleta")
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     })
 
