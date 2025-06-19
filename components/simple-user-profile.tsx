@@ -12,6 +12,8 @@ import { useAuth } from "@/components/auth-provider-supabase"
 import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
+import { UserGallery } from "@/components/user-gallery"
+import { GamingProfiles } from "@/components/gaming-profiles"
 
 interface UserStats {
   gamesPlayed: number
@@ -360,7 +362,7 @@ export function SimpleUserProfile() {
 
       {/* Tabs de contenido */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800 border-slate-700">
+        <TabsList className="grid w-full grid-cols-5 bg-slate-800 border-slate-700">
           <TabsTrigger value="info" className="data-[state=active]:bg-purple-600">
             Información
           </TabsTrigger>
@@ -369,6 +371,12 @@ export function SimpleUserProfile() {
           </TabsTrigger>
           <TabsTrigger value="activity" className="data-[state=active]:bg-purple-600">
             Actividad
+          </TabsTrigger>
+          <TabsTrigger value="gallery" className="data-[state=active]:bg-purple-600">
+            Galería
+          </TabsTrigger>
+          <TabsTrigger value="gaming" className="data-[state=active]:bg-purple-600">
+            Gaming
           </TabsTrigger>
         </TabsList>
 
@@ -470,6 +478,13 @@ export function SimpleUserProfile() {
               <p className="text-slate-400">Tu actividad reciente aparecerá aquí</p>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="gallery" className="mt-6">
+          <UserGallery userId={userProfile.id} isOwnProfile={true} />
+        </TabsContent>
+
+        <TabsContent value="gaming" className="mt-6">
+          <GamingProfiles userId={userProfile.id} isOwnProfile={true} />
         </TabsContent>
       </Tabs>
     </div>
