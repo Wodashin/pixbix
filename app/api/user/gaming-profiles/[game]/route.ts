@@ -5,7 +5,7 @@ export async function DELETE(request: Request, { params }: { params: { game: str
   try {
     const supabase = createClient()
 
-    // Verificar autenticación
+    // Verify authentication
     const {
       data: { user },
       error: authError,
@@ -15,19 +15,19 @@ export async function DELETE(request: Request, { params }: { params: { game: str
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    // Eliminar perfil de gaming
+    // Delete gaming profile
     const { error: deleteError } = await supabase
       .from("user_gaming_profiles")
       .delete()
-      .eq("game", params.game)
       .eq("user_id", user.id)
+      .eq("game", params.game)
 
     if (deleteError) {
       console.error("Error al eliminar perfil de gaming:", deleteError)
       return NextResponse.json({ error: "Error al eliminar perfil" }, { status: 500 })
     }
 
-    return NextResponse.json({ message: "Perfil eliminado correctamente" })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error en DELETE de perfil de gaming:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
