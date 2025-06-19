@@ -74,10 +74,12 @@ export function AuthNavReal() {
           </div>
         </div>
         <DropdownMenuSeparator className="bg-slate-700" />
-        <DropdownMenuItem className="text-slate-300 hover:bg-slate-700">
-          <User className="mr-2 h-4 w-4" />
-          <span>Mi Perfil</span>
-        </DropdownMenuItem>
+        <Link href="/perfil">
+          <DropdownMenuItem className="text-slate-300 hover:bg-slate-700">
+            <User className="mr-2 h-4 w-4" />
+            <span>Mi Perfil</span>
+          </DropdownMenuItem>
+        </Link>
         <DropdownMenuSeparator className="bg-slate-700" />
         <DropdownMenuItem
           className="text-red-400 hover:bg-slate-700 cursor-pointer"
