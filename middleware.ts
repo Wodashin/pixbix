@@ -16,6 +16,12 @@ export async function middleware(request: NextRequest) {
     "/eventos",
     "/marketplace",
     "/debug",
+    "/debug/complete",
+    "/debug/discord-config",
+    "/debug/discord-validation",
+    "/debug/discord-complete",
+    "/debug/discord-env",
+    "/debug/auth",
   ]
 
   // Verificar si la ruta actual es pública
@@ -23,7 +29,12 @@ export async function middleware(request: NextRequest) {
   console.log("Middleware - URL:", url)
 
   const isPublicRoute = publicRoutes.some(
-    (route) => url === route || url.startsWith("/api/") || url.startsWith("/_next/") || url.startsWith("/auth/"),
+    (route) =>
+      url === route ||
+      url.startsWith("/api/") ||
+      url.startsWith("/_next/") ||
+      url.startsWith("/auth/") ||
+      url.startsWith("/debug/"),
   )
 
   console.log("Middleware - Is public route:", isPublicRoute)
