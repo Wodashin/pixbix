@@ -20,39 +20,46 @@ export async function GET() {
       return NextResponse.json({ error: "No user found" }, { status: 401 })
     }
 
-    // Use direct SQL query to avoid policy recursion
-    const { data: profile, error: profileError } = await supabase.rpc("get_user_profile", { user_id: user.id })
+    // Try to get user from database, but don't fail if it doesn't exist
+    let profile = null
 
-    if (profileError) {
-      console.error("Profile error:", profileError)
+    try {
+      const { data: dbUser, error: dbError } = await supabase.from("users").select("*").eq("id", user.id).single()
 
-      // Fallback: try direct select with service role if available
-      const { data: fallbackProfile, error: fallbackError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", user.id)
-        .single()
+      if (!dbError && dbUser) {
+        profile = dbUser
+      }
+    } catch (dbError) {
+      console.log("Database user not found, creating from auth user")
+    }
 
-      if (fallbackError) {
-        console.error("Fallback error:", fallbackError)
-
-        // Last resort: create basic profile from auth user
-        const basicProfile = {
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-          username: user.user_metadata?.preferred_username || null,
-          image: user.user_metadata?.avatar_url || null,
-          role: "user",
-          level: 1,
-          created_at: user.created_at,
-          updated_at: new Date().toISOString(),
-        }
-
-        return NextResponse.json({ user: basicProfile })
+    // If no database profile, create one from auth user
+    if (!profile) {
+      profile = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        username: user.user_metadata?.preferred_username || null,
+        image: user.user_metadata?.avatar_url || null,
+        role: "user",
+        level: 1,
+        bio: null,
+        location: null,
+        website: null,
+        created_at: user.created_at,
+        updated_at: new Date().toISOString(),
       }
 
-      return NextResponse.json({ user: fallbackProfile })
+      // Try to insert into database, but don't fail if it doesn't work
+      try {
+        const { data: insertedUser } = await supabase.from("users").insert([profile]).select().single()
+
+        if (insertedUser) {
+          profile = insertedUser
+        }
+      } catch (insertError) {
+        console.log("Could not insert user into database, using fallback profile")
+      }
     }
 
     return NextResponse.json({ user: profile })
@@ -81,15 +88,19 @@ export async function PUT(request: Request) {
 
     // Check if username is already taken (if updating username)
     if (username) {
-      const { data: existingUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("username", username)
-        .neq("id", user.id)
-        .single()
+      try {
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("username", username)
+          .neq("id", user.id)
+          .single()
 
-      if (existingUser) {
-        return NextResponse.json({ error: "Username already taken" }, { status: 400 })
+        if (existingUser) {
+          return NextResponse.json({ error: "Username already taken" }, { status: 400 })
+        }
+      } catch (e) {
+        // Username check failed, but continue
       }
     }
 
@@ -104,20 +115,56 @@ export async function PUT(request: Request) {
     if (location !== undefined) updateData.location = location
     if (website !== undefined) updateData.website = website
 
-    // Update user profile
-    const { data: updatedProfile, error: updateError } = await supabase
-      .from("users")
-      .update(updateData)
-      .eq("id", user.id)
-      .select()
-      .single()
+    // Try to update user profile
+    try {
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("users")
+        .update(updateData)
+        .eq("id", user.id)
+        .select()
+        .single()
 
-    if (updateError) {
+      if (updateError) {
+        throw updateError
+      }
+
+      return NextResponse.json({ user: updatedProfile })
+    } catch (updateError) {
       console.error("Update error:", updateError)
-      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
-    }
 
-    return NextResponse.json({ user: updatedProfile })
+      // If update fails, try to insert the user first
+      try {
+        const newUser = {
+          id: user.id,
+          email: user.email,
+          name: updateData.name || user.user_metadata?.full_name || null,
+          username: updateData.username || null,
+          bio: updateData.bio || null,
+          location: updateData.location || null,
+          website: updateData.website || null,
+          image: user.user_metadata?.avatar_url || null,
+          role: "user",
+          level: 1,
+          created_at: user.created_at,
+          updated_at: updateData.updated_at,
+        }
+
+        const { data: insertedUser, error: insertError } = await supabase
+          .from("users")
+          .insert([newUser])
+          .select()
+          .single()
+
+        if (insertError) {
+          throw insertError
+        }
+
+        return NextResponse.json({ user: insertedUser })
+      } catch (insertError) {
+        console.error("Insert error:", insertError)
+        return NextResponse.json({ error: "Failed to update profile" }, { status: 500 })
+      }
+    }
   } catch (error) {
     console.error("Error updating profile:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
