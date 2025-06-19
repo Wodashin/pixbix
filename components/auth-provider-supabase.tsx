@@ -73,7 +73,10 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   const signIn = async (provider: "google" | "discord") => {
     console.log(`Iniciando login con ${provider}...`)
 
-    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"
+    // FORZAR la URL correcta de Supabase
+    const redirectUrl = "https://ztmqoitwefclamzmizms.supabase.co/auth/v1/callback"
+
+    console.log("Using redirect URL:", redirectUrl)
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -105,7 +108,7 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   const signUp = async (email: string, password: string) => {
     console.log("Registrando nuevo usuario...")
 
-    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"
+    const redirectUrl = "https://ztmqoitwefclamzmizms.supabase.co/auth/v1/callback"
 
     const { error } = await supabase.auth.signUp({
       email,
