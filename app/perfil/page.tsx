@@ -1,5 +1,5 @@
-import { SimpleProfileFallback } from "@/components/simple-profile-fallback"
+import { EnhancedUserProfileFixed } from "@/components/enhanced-user-profile-fixed"
 
-export default function ProfilePage() {
-  return <SimpleProfileFallback />
+export default function PerfilPage() {
+  return <EnhancedUserProfileFixed />
 }
