@@ -57,28 +57,7 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
 
       if (event === "SIGNED_IN" && session?.user) {
         setUser(session.user)
-
-        // Crear o actualizar usuario en la tabla users
-        try {
-          const { error } = await supabase.from("users").upsert(
-            {
-              id: session.user.id,
-              email: session.user.email || "",
-              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name,
-              image: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-              role: "user", // Default role
-            },
-            {
-              onConflict: "id",
-            },
-          )
-
-          if (error) {
-            console.error("Error al crear/actualizar usuario:", error)
-          }
-        } catch (error) {
-          console.error("Error al procesar usuario:", error)
-        }
+        // No intentamos crear el usuario aquí, el trigger se encarga
       } else if (event === "SIGNED_OUT") {
         setUser(null)
       }
@@ -94,7 +73,6 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   const signIn = async (provider: "google" | "discord") => {
     console.log(`Iniciando login con ${provider}...`)
 
-    // Usar la URL actual del navegador
     const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"
 
     const { error } = await supabase.auth.signInWithOAuth({
