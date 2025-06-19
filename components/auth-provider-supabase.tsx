@@ -36,7 +36,7 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
           error,
         } = await supabase.auth.getUser()
 
-        if (error) {
+        if (error && error.message !== "Auth session missing!") {
           console.error("Error al obtener usuario:", error)
         }
 
@@ -94,19 +94,13 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
   const signIn = async (provider: "google" | "discord") => {
     console.log(`Iniciando login con ${provider}...`)
 
-    // Verificar que las variables de entorno estén configuradas
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      throw new Error("Configuración de Supabase incompleta")
-    }
+    // Usar la URL actual del navegador
+    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
+        redirectTo: redirectUrl,
       },
     })
 
@@ -132,11 +126,14 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
 
   const signUp = async (email: string, password: string) => {
     console.log("Registrando nuevo usuario...")
+
+    const redirectUrl = typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : "/auth/callback"
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectUrl,
       },
     })
 
