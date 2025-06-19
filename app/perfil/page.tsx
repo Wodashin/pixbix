@@ -1,5 +1,11 @@
-import { EnhancedUserProfileFixed } from "@/components/enhanced-user-profile-fixed"
+import { Header } from "@/components/header"
+import { UserProfileRestored } from "@/components/user-profile-restored"
 
 export default function PerfilPage() {
-  return <EnhancedUserProfileFixed />
+  return (
+    <>
+      <Header />
+      <UserProfileRestored />
+    </>
+  )
 }
