@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { ImageUploadComponent } from "@/components/image-upload-component"
 import { Plus, ImageIcon, Trash2, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/components/auth-provider-supabase"
+import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 
 interface GalleryImage {
   id: string
@@ -65,7 +67,7 @@ export function UserGallery({ userId, isOwnProfile = false }: UserGalleryProps) 
           image_url: imageUrl,
           title: imageTitle || "Sin título",
           description: imageDescription || "",
-          is_public: true,
+          is_public: false, // Save as draft initially
         }),
       })
 
@@ -74,6 +76,10 @@ export function UserGallery({ userId, isOwnProfile = false }: UserGalleryProps) 
         setImageDescription("")
         setUploadDialogOpen(false)
         fetchGalleryImages()
+        toast({
+          title: "¡Imagen subida!",
+          description: "La imagen se guardó como borrador. Puedes publicarla cuando quieras.",
+        })
       }
     } catch (error) {
       console.error("Error al guardar imagen:", error)
@@ -184,7 +190,9 @@ export function UserGallery({ userId, isOwnProfile = false }: UserGalleryProps) 
                         size="sm"
                         variant="outline"
                         onClick={() => toggleImageVisibility(image.id, image.is_public)}
-                        className="bg-slate-800/80 border-slate-600 text-white h-8 w-8 p-0"
+                        className={`${
+                          image.is_public ? "bg-green-600/80 border-green-500" : "bg-yellow-600/80 border-yellow-500"
+                        } text-white h-8 w-8 p-0`}
                       >
                         {image.is_public ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                       </Button>
@@ -199,7 +207,21 @@ export function UserGallery({ userId, isOwnProfile = false }: UserGalleryProps) 
                     </div>
                   </div>
                 )}
-                <p className="text-sm text-white mt-2 truncate">{image.title}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-sm text-white truncate flex-1">{image.title}</p>
+                  {isOwnProfile && (
+                    <Badge
+                      variant="outline"
+                      className={`ml-2 text-xs ${
+                        image.is_public
+                          ? "bg-green-600/20 text-green-400 border-green-500"
+                          : "bg-yellow-600/20 text-yellow-400 border-yellow-500"
+                      }`}
+                    >
+                      {image.is_public ? "Público" : "Borrador"}
+                    </Badge>
+                  )}
+                </div>
               </div>
             ))}
           </div>
