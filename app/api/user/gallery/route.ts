@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
     const supabase = createClient()
 
-    // Obtener usuario autenticado
+    // Get authenticated user
     const {
       data: { user },
       error: authError,
@@ -24,15 +24,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
     }
 
-    // Obtener imágenes de la galería
-    let query = supabase.from("user_gallery").select("*").eq("user_id", targetUserId)
+    // Get gallery images
+    let query = supabase
+      .from("user_gallery")
+      .select("*")
+      .eq("user_id", targetUserId)
+      .order("uploaded_at", { ascending: false })
 
-    // Si no es el propio usuario, solo mostrar imágenes públicas
-    if (user?.id !== targetUserId) {
+    // If viewing another user's gallery, only show public images
+    if (userId && userId !== user?.id) {
       query = query.eq("is_public", true)
     }
 
-    const { data: images, error } = await query.order("uploaded_at", { ascending: false })
+    const { data: images, error } = await query
 
     if (error) {
       console.error("Error al obtener galería:", error)
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient()
 
-    // Verificar autenticación
+    // Verify authentication
     const {
       data: { user },
       error: authError,
@@ -61,9 +65,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { image_url, title, description, is_public } = body
+    const { image_url, title, description, is_public = false } = body
 
-    // Insertar imagen en la galería
+    // Insert new gallery image
     const { data: newImage, error: insertError } = await supabase
       .from("user_gallery")
       .insert({
@@ -71,7 +75,8 @@ export async function POST(request: Request) {
         image_url,
         title,
         description,
-        is_public: is_public ?? true,
+        is_public,
+        uploaded_at: new Date().toISOString(),
       })
       .select()
       .single()
