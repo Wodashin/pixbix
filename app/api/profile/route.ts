@@ -1,52 +1,86 @@
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { createClient } from "@/utils/supabase/server"
 
-import type { Database } from "@/lib/database.types"
+export async function GET() {
+  try {
+    const supabase = createClient()
 
-export const dynamic = "force-dynamic"
+    // Obtener usuario autenticado
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    // Obtener perfil del usuario desde la tabla users
+    const { data: profile, error: profileError } = await supabase.from("users").select("*").eq("id", user.id).single()
+
+    if (profileError) {
+      console.error("Error al obtener perfil:", profileError)
+      return NextResponse.json({ error: "Error al obtener perfil" }, { status: 500 })
+    }
+
+    return NextResponse.json({ user: profile })
+  } catch (error) {
+    console.error("Error en API de perfil:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+  }
+}
 
 export async function PUT(request: Request) {
-  const supabase = createRouteHandlerClient<Database>({ cookies })
+  try {
+    const supabase = createClient()
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    // Verificar autenticación
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
 
-  const user = session.user
+    const body = await request.json()
+    const { name, username } = body
 
-  const body = await request.json()
-  const { name, username } = body
+    // Verificar si el username ya existe (si se está actualizando)
+    if (username) {
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("username", username)
+        .neq("id", user.id)
+        .single()
 
-  // Verificar si el username ya existe (si se está actualizando)
-  if (username) {
-    const { data: existingUser } = await supabase
+      if (existingUser) {
+        return NextResponse.json({ error: "Este nombre de usuario ya está en uso" }, { status: 400 })
+      }
+    }
+
+    // Actualizar perfil del usuario
+    const { data: updatedProfile, error: updateError } = await supabase
       .from("users")
-      .select("id")
-      .eq("username", username)
-      .neq("id", user.id)
+      .update({
+        name,
+        username,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id)
+      .select()
       .single()
 
-    if (existingUser) {
-      return NextResponse.json({ error: "Este nombre de usuario ya está en uso" }, { status: 400 })
+    if (updateError) {
+      console.error("Error al actualizar perfil:", updateError)
+      return NextResponse.json({ error: "Error al actualizar perfil" }, { status: 500 })
     }
+
+    return NextResponse.json({ user: updatedProfile })
+  } catch (error) {
+    console.error("Error en actualización de perfil:", error)
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
-
-  const { error } = await supabase
-    .from("users")
-    .update({
-      name,
-      username,
-    })
-    .eq("id", user.id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ message: "Profile updated" }, { status: 200 })
 }
