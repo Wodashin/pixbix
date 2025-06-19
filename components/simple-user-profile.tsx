@@ -479,6 +479,7 @@ export function SimpleUserProfile() {
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value="gallery" className="mt-6">
           <UserGallery userId={userProfile.id} isOwnProfile={true} />
         </TabsContent>
