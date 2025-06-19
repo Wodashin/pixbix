@@ -5,7 +5,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const supabase = createClient()
 
-    // Verificar autenticación
+    // Verify authentication
     const {
       data: { user },
       error: authError,
@@ -18,10 +18,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const body = await request.json()
     const { is_public } = body
 
-    // Actualizar visibilidad de la imagen
+    // Update image visibility
     const { data: updatedImage, error: updateError } = await supabase
       .from("user_gallery")
-      .update({ is_public })
+      .update({ is_public, updated_at: new Date().toISOString() })
       .eq("id", params.id)
       .eq("user_id", user.id)
       .select()
@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return NextResponse.json({ image: updatedImage })
   } catch (error) {
-    console.error("Error en PATCH de galería:", error)
+    console.error("Error en PATCH de imagen:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
@@ -43,7 +43,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const supabase = createClient()
 
-    // Verificar autenticación
+    // Verify authentication
     const {
       data: { user },
       error: authError,
@@ -53,7 +53,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    // Eliminar imagen de la galería
+    // Delete image
     const { error: deleteError } = await supabase
       .from("user_gallery")
       .delete()
@@ -65,9 +65,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       return NextResponse.json({ error: "Error al eliminar imagen" }, { status: 500 })
     }
 
-    return NextResponse.json({ message: "Imagen eliminada correctamente" })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error en DELETE de galería:", error)
+    console.error("Error en DELETE de imagen:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
