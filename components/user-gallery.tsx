@@ -131,7 +131,7 @@ export function UserGallery({ userId, isOwnProfile = false }: UserGalleryProps) 
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-white flex items-center">
           <ImageIcon className="mr-2 h-5 w-5 text-cyan-400" />
-          Mi Galería
+          Galería
         </CardTitle>
         {isOwnProfile && (
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
