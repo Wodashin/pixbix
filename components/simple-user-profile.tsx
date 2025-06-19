@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Mail, Edit2, Check, X, Loader2, Gamepad2, Trophy, Star, Calendar } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Mail, Edit2, Check, X, Loader2, Calendar, MessageSquare, Heart, Users, Settings } from "lucide-react"
 import { useAuth } from "@/components/auth-provider-supabase"
 import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
@@ -17,6 +18,8 @@ interface UserStats {
   achievements: number
   rating: number
   memberSince: string
+  postsCount: number
+  likesReceived: number
 }
 
 interface UserProfile {
@@ -29,6 +32,15 @@ interface UserProfile {
   provider: string
 }
 
+interface UserPost {
+  id: string
+  title: string
+  content: string
+  created_at: string
+  likes_count: number
+  comments_count: number
+}
+
 export function SimpleUserProfile() {
   const { user } = useAuth()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
@@ -37,12 +49,16 @@ export function SimpleUserProfile() {
     achievements: 0,
     rating: 0,
     memberSince: "",
+    postsCount: 0,
+    likesReceived: 0,
   })
+  const [userPosts, setUserPosts] = useState<UserPost[]>([])
   const [loading, setLoading] = useState(true)
   const [editingUsername, setEditingUsername] = useState(false)
   const [newUsername, setNewUsername] = useState("")
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState("")
+  const [activeTab, setActiveTab] = useState("info")
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -85,11 +101,35 @@ export function SimpleUserProfile() {
           locale: es,
         })
 
+        // Obtener posts del usuario (simulado por ahora)
+        const mockPosts: UserPost[] = [
+          {
+            id: "1",
+            title: "Mi primera partida en Valorant",
+            content: "¡Acabo de terminar mi primera partida clasificatoria! Fue increíble...",
+            created_at: new Date(Date.now() - 86400000).toISOString(), // 1 día atrás
+            likes_count: 12,
+            comments_count: 5,
+          },
+          {
+            id: "2",
+            title: "Nuevo setup gaming",
+            content: "Finalmente actualicé mi setup con una nueva GPU RTX 4070...",
+            created_at: new Date(Date.now() - 172800000).toISOString(), // 2 días atrás
+            likes_count: 8,
+            comments_count: 3,
+          },
+        ]
+
+        setUserPosts(mockPosts)
+
         setUserStats({
           gamesPlayed: 42,
           achievements: 15,
           rating: 4.8,
           memberSince: memberSince,
+          postsCount: mockPosts.length,
+          likesReceived: mockPosts.reduce((sum, post) => sum + post.likes_count, 0),
         })
       } catch (error) {
         console.error("Error al obtener estadísticas:", error)
@@ -126,8 +166,9 @@ export function SimpleUserProfile() {
         throw new Error(data.error || "Error al actualizar el perfil")
       }
 
-      setUserProfile({ ...userProfile, username: newUsername.trim() })
+      setUserProfile({ ...userProfile!, username: newUsername.trim() })
       setEditingUsername(false)
+      setError("")
     } catch (error) {
       console.error("Error al actualizar username:", error)
       setError(error instanceof Error ? error.message : "Error al actualizar")
@@ -154,143 +195,283 @@ export function SimpleUserProfile() {
     }
   }
 
-  const getDaysActive = (createdAt: string) => {
-    const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
-    return days
-  }
-
   if (!user) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-4 text-center">
-          <p className="text-slate-400">Inicia sesión para ver tu perfil</p>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-8 text-center">
+            <p className="text-slate-400">Inicia sesión para ver tu perfil</p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (loading) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-4 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-2" />
-          <p className="text-slate-400">Cargando perfil...</p>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-400 mx-auto mb-2" />
+            <p className="text-slate-400">Cargando perfil...</p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   if (!userProfile) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-4 text-center">
-          <p className="text-slate-400">Error al cargar el perfil</p>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-8 text-center">
+            <p className="text-slate-400">Error al cargar el perfil</p>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Información Personal */}
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-4 mb-4">
-            <Avatar className="h-16 w-16">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Header del perfil */}
+      <Card className="bg-gradient-to-r from-slate-800 to-slate-900 border-slate-700 mb-6">
+        <CardContent className="p-8">
+          <div className="flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
+            <Avatar className="h-32 w-32 border-4 border-cyan-400">
               <AvatarImage src={userProfile.avatar_url || "/placeholder.svg"} />
-              <AvatarFallback>{userProfile.name?.[0]?.toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-slate-700 text-cyan-400 text-4xl">
+                {userProfile.name?.[0]?.toUpperCase()}
+              </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-1">
-                <h3 className="font-bold text-white text-lg">{userProfile.name}</h3>
-                {getProviderBadge(userProfile.provider)}
-              </div>
 
-              {/* Username editable */}
-              {editingUsername ? (
-                <div className="flex items-center space-x-2 mb-2">
-                  <Input
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    className="bg-slate-700 border-slate-600 text-white w-40 h-8 text-sm"
-                    placeholder="Username"
-                    disabled={updating}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleUpdateUsername}
-                    disabled={updating}
-                    className="bg-green-600 hover:bg-green-700 h-8 w-8 p-0"
-                  >
-                    {updating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancelEdit}
-                    disabled={updating}
-                    className="border-slate-600 text-slate-300 hover:bg-slate-700 h-8 w-8 p-0"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                <div>
+                  <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
+                    <h1 className="text-3xl font-bold text-white">{userProfile.name}</h1>
+                    {getProviderBadge(userProfile.provider)}
+                  </div>
+
+                  {/* Username editable */}
+                  {editingUsername ? (
+                    <div className="flex items-center justify-center md:justify-start space-x-2 mb-2">
+                      <Input
+                        value={newUsername}
+                        onChange={(e) => setNewUsername(e.target.value)}
+                        className="bg-slate-700 border-slate-600 text-white w-48"
+                        placeholder="Nombre de usuario"
+                        disabled={updating}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleUpdateUsername}
+                        disabled={updating}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEdit}
+                        disabled={updating}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center md:justify-start space-x-2 mb-2">
+                      <span className="text-xl text-purple-400">@{userProfile.username}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingUsername(true)}
+                        className="text-slate-400 hover:text-white hover:bg-slate-700"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-center md:justify-start space-x-2 text-slate-400">
+                    <Mail className="h-4 w-4" />
+                    <span>{userProfile.email}</span>
+                  </div>
                 </div>
-              ) : (
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-purple-400">@{userProfile.username}</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setEditingUsername(true)}
-                    className="text-slate-400 hover:text-white hover:bg-slate-700 h-6 w-6 p-0"
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
 
-              <div className="flex items-center space-x-2">
-                <Mail className="h-3 w-3 text-slate-400" />
-                <span className="text-slate-400 text-sm">{userProfile.email}</span>
+                <Button className="bg-cyan-600 hover:bg-cyan-700 mt-4 md:mt-0">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configuración
+                </Button>
               </div>
 
-              {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
-            </div>
-          </div>
+              {error && <p className="text-red-400 text-sm mb-4 text-center md:text-left">{error}</p>}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Gamepad2 className="h-4 w-4 text-cyan-400" />
-              <div>
-                <p className="text-sm text-slate-400">Partidas</p>
-                <p className="font-semibold text-white">{userStats.gamesPlayed}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Trophy className="h-4 w-4 text-yellow-400" />
-              <div>
-                <p className="text-sm text-slate-400">Logros</p>
-                <p className="font-semibold text-white">{userStats.achievements}</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Star className="h-4 w-4 text-orange-400" />
-              <div>
-                <p className="text-sm text-slate-400">Valoración</p>
-                <p className="font-semibold text-white">{userStats.rating}/5</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4 text-green-400" />
-              <div>
-                <p className="text-sm text-slate-400">Miembro desde</p>
-                <p className="font-semibold text-white">{userStats.memberSince}</p>
+              <div className="flex items-center justify-center md:justify-start space-x-2 text-slate-400">
+                <Calendar className="h-4 w-4" />
+                <span>Miembro {userStats.memberSince}</span>
               </div>
             </div>
           </div>
-
-          <Button className="w-full mt-4 bg-cyan-600 hover:bg-cyan-700">Ver Perfil Completo</Button>
         </CardContent>
       </Card>
+
+      {/* Estadísticas */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-cyan-400">{userStats.postsCount}</div>
+            <div className="text-sm text-slate-400">Posts</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-red-400">{userStats.likesReceived}</div>
+            <div className="text-sm text-slate-400">Likes</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-cyan-400">{userStats.gamesPlayed}</div>
+            <div className="text-sm text-slate-400">Partidas</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-yellow-400">{userStats.achievements}</div>
+            <div className="text-sm text-slate-400">Logros</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-orange-400">{userStats.rating}</div>
+            <div className="text-sm text-slate-400">Valoración</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-purple-400">12</div>
+            <div className="text-sm text-slate-400">Nivel</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs de contenido */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800 border-slate-700">
+          <TabsTrigger value="info" className="data-[state=active]:bg-purple-600">
+            Información
+          </TabsTrigger>
+          <TabsTrigger value="posts" className="data-[state=active]:bg-purple-600">
+            Mis Posts
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="data-[state=active]:bg-purple-600">
+            Actividad
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info" className="mt-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white">Información Personal</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Detalles de la cuenta</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-slate-400">Nombre completo</label>
+                      <p className="text-white">{userProfile.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Nombre de usuario</label>
+                      <p className="text-white">@{userProfile.username}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Correo electrónico</label>
+                      <p className="text-white">{userProfile.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Método de acceso</label>
+                      <p className="text-white capitalize">{userProfile.provider}</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Estadísticas</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm text-slate-400">Miembro desde</label>
+                      <p className="text-white">{userStats.memberSince}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Posts publicados</label>
+                      <p className="text-white">{userStats.postsCount}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Likes recibidos</label>
+                      <p className="text-white">{userStats.likesReceived}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Nivel actual</label>
+                      <p className="text-white">Nivel 12 - Gamer Entusiasta</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="posts" className="mt-6">
+          <div className="space-y-4">
+            {userPosts.length > 0 ? (
+              userPosts.map((post) => (
+                <Card key={post.id} className="bg-slate-800 border-slate-700">
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-white mb-2">{post.title}</h3>
+                    <p className="text-slate-300 mb-4">{post.content}</p>
+                    <div className="flex items-center justify-between text-sm text-slate-400">
+                      <span>{formatDistanceToNow(new Date(post.created_at), { addSuffix: true, locale: es })}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <Heart className="h-4 w-4" />
+                          <span>{post.likes_count}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MessageSquare className="h-4 w-4" />
+                          <span>{post.comments_count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="bg-slate-800 border-slate-700">
+                <CardContent className="p-8 text-center">
+                  <MessageSquare className="h-12 w-12 mx-auto text-slate-600 mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">No hay posts aún</h3>
+                  <p className="text-slate-400">¡Comparte tu primera publicación con la comunidad!</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="activity" className="mt-6">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="p-8 text-center">
+              <Users className="h-12 w-12 mx-auto text-slate-600 mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Actividad Reciente</h3>
+              <p className="text-slate-400">Tu actividad reciente aparecerá aquí</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
