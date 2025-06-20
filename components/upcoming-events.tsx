@@ -6,7 +6,7 @@ import { Calendar, MapPin, Users, Trophy } from "lucide-react"
 const events = [
   {
     id: 1,
-    title: "Nobux Gaming Championship 2024",
+    title: "PixBae Championship 2024",
     date: "2024-02-15",
     time: "19:00",
     location: "Online",
