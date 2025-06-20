@@ -66,7 +66,7 @@ export function Footer() {
                 Centro de Ayuda
               </Link>
               <a href="mailto:ilyon3d@gmail.com" className="block text-slate-400 hover:text-cyan-400 transition-colors">
-                Contacto: ilyon3d@gmail.com
+                Contacto: proyectanegocioscop@gmail.com
               </a>
               <Link href="/terminos" className="block text-slate-400 hover:text-cyan-400 transition-colors">
                 Términos de Servicio
