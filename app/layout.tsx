@@ -7,7 +7,7 @@ import { AuthProviderSupabase } from "@/components/auth-provider-supabase"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Nobux Gaming",
+  title: "PixBae",
   description: "Plataforma de gaming y comunidad",
 }
 
