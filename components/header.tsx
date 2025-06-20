@@ -45,7 +45,7 @@ export function Header() {
           <Link href="/" className="flex items-center space-x-2">
             <Gamepad2 className="h-8 w-8 text-cyan-500" />
             <span className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-600 bg-clip-text text-transparent">
-              Nobux Gaming
+              PixBae
             </span>
           </Link>
 
