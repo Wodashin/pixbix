@@ -48,7 +48,7 @@ export function AuthFeedback() {
             )}
             <div>
               <h3 className="font-semibold text-white">
-                {isNewUser ? "¡Bienvenido a Nobux Gaming!" : "¡Bienvenido de vuelta!"}
+                {isNewUser ? "¡Bienvenido a PixBae!" : "¡Bienvenido de vuelta!"}
               </h3>
               <p className="text-sm text-slate-400">
                 {isNewUser
