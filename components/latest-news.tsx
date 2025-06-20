@@ -7,7 +7,7 @@ import Image from "next/image"
 const news = [
   {
     id: 1,
-    title: "Nobux Gaming alcanza 50,000 usuarios registrados",
+    title: "PixBae alcanza 50,000 usuarios registrados",
     excerpt: "Nuestra plataforma de compañía gaming sigue creciendo con miles de nuevos usuarios cada mes.",
     image: "/placeholder.svg?height=200&width=350",
     category: "Nobux",
@@ -27,7 +27,7 @@ const news = [
   },
   {
     id: 3,
-    title: "Los juegos más populares en Nobux Gaming este mes",
+    title: "Los juegos más populares en PixBae este mes",
     excerpt: "Valorant, League of Legends y Genshin Impact lideran las preferencias de nuestros compañeros.",
     image: "/placeholder.svg?height=200&width=350",
     category: "Tendencias",
