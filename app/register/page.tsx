@@ -53,8 +53,8 @@ export default function RegisterPage() {
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
             <Gamepad2 className="h-12 w-12 text-cyan-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-white mb-2">Únete a Nobux Gaming</h1>
-            <p className="text-slate-400">Crea tu cuenta y comienza tu aventura gaming</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Únete a PixBae</h1>
+            <p className="text-slate-400">Crea tu cuenta y comienza tu aventura gaming en PixBae</p>
           </div>
 
           <Card className="bg-slate-800 border-slate-700">
