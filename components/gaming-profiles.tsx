@@ -2,537 +2,208 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { useUser } from "@clerk/nextjs"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, ExternalLink, Edit2, Trash2, Trophy, Target } from "lucide-react"
-import { useAuth } from "@/components/auth-provider-supabase"
 
 interface GamingProfile {
-  game: string
+  id: string
+  userId: string
   username: string
-  rank: string
-  tracker_url: string
+  bio: string
+  favoriteGames: string[]
+  lookingForGroup: boolean
+  skillLevel: number
+  platform: string
 }
 
-interface GamingProfilesProps {
-  userId?: string
-  isOwnProfile?: boolean
-}
-
-const SUPPORTED_GAMES = [
-  { id: "valorant", name: "Valorant", icon: "🎯" },
-  { id: "league", name: "League of Legends", icon: "⚔️" },
-  { id: "csgo", name: "CS:GO", icon: "🔫" },
-  { id: "apex", name: "Apex Legends", icon: "🏆" },
-  { id: "overwatch", name: "Overwatch 2", icon: "🎮" },
-  { id: "rocket", name: "Rocket League", icon: "🚗" },
-]
-
-export function GamingProfiles({ userId, isOwnProfile = false }: GamingProfilesProps) {
-  const { user } = useAuth()
-  const [profiles, setProfiles] = useState<Record<string, GamingProfile>>({})
-  const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingProfile, setEditingProfile] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    game: "",
-    username: "",
-    rank: "",
-    tracker_url: "",
-  })
+const GamingProfiles = () => {
+  const { user, isLoaded } = useUser()
+  const [gamingProfile, setGamingProfile] = useState<GamingProfile | null>(null)
+  const [username, setUsername] = useState("")
+  const [bio, setBio] = useState("")
+  const [favoriteGames, setFavoriteGames] = useState<string[]>([])
+  const [lookingForGroup, setLookingForGroup] = useState(false)
+  const [skillLevel, setSkillLevel] = useState(50)
+  const [platform, setPlatform] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    fetchGamingProfiles()
-  }, [userId, user])
+    if (!user) return
 
-  const fetchGamingProfiles = async () => {
-    try {
-      const targetUserId = userId || user?.id
-      if (!targetUserId) return
-
-      const response = await fetch(`/api/user/gaming-profiles?userId=${targetUserId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProfiles(data.gaming_profiles || {})
+    const fetchGamingProfile = async () => {
+      setIsLoading(true)
+      try {
+        const response = await fetch(`/api/gaming-profiles?userId=${user.id}`)
+        if (response.ok) {
+          const data = await response.json()
+          setGamingProfile(data)
+          setUsername(data.username)
+          setBio(data.bio)
+          setFavoriteGames(data.favoriteGames)
+          setLookingForGroup(data.lookingForGroup)
+          setSkillLevel(data.skillLevel)
+          setPlatform(data.platform)
+        } else {
+          setGamingProfile(null)
+          setUsername("")
+          setBio("")
+          setFavoriteGames([])
+          setLookingForGroup(false)
+          setSkillLevel(50)
+          setPlatform("")
+          console.error("Failed to fetch gaming profile")
+        }
+      } catch (error) {
+        console.error("Error fetching gaming profile:", error)
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error("Error al cargar perfiles de gaming:", error)
-    } finally {
-      setLoading(false)
     }
-  }
+
+    fetchGamingProfile()
+  }, [user])
 
   const handleSaveProfile = async () => {
-    try {
-      const payload = editingProfile ? { ...formData, game: editingProfile } : formData
+    if (!user) return
 
-      const response = await fetch("/api/user/gaming-profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/gaming-profiles", {
+        method: gamingProfile ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: gamingProfile?.id,
+          userId: user.id,
+          username,
+          bio,
+          favoriteGames,
+          lookingForGroup,
+          skillLevel,
+          platform,
+        }),
       })
 
       if (response.ok) {
-        setFormData({ game: "", username: "", rank: "", tracker_url: "" })
-        setDialogOpen(false)
-        setEditingProfile(null)
-        fetchGamingProfiles()
+        const data = await response.json()
+        setGamingProfile(data)
+        toast.success("Gaming profile saved successfully!")
+      } else {
+        toast.error("Failed to save gaming profile.")
       }
     } catch (error) {
-      console.error("Error al guardar perfil:", error)
+      console.error("Error saving gaming profile:", error)
+      toast.error("Error saving gaming profile.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const handleDeleteProfile = async (game: string) => {
-    try {
-      const response = await fetch(`/api/user/gaming-profiles/${game}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        const newProfiles = { ...profiles }
-        delete newProfiles[game]
-        setProfiles(newProfiles)
-      }
-    } catch (error) {
-      console.error("Error al eliminar perfil:", error)
-    }
-  }
-
-  const handleEditProfile = (game: string, profile: GamingProfile) => {
-    setFormData(profile)
-    setEditingProfile(game)
-    setDialogOpen(true)
-  }
-
-  const getRankColor = (rank: string) => {
-    const lowerRank = rank.toLowerCase()
-    if (lowerRank.includes("radiant") || lowerRank.includes("challenger")) return "bg-red-600"
-    if (lowerRank.includes("immortal") || lowerRank.includes("grandmaster")) return "bg-purple-600"
-    if (lowerRank.includes("diamond") || lowerRank.includes("master")) return "bg-blue-600"
-    if (lowerRank.includes("platinum") || lowerRank.includes("emerald")) return "bg-green-600"
-    if (lowerRank.includes("gold")) return "bg-yellow-600"
-    if (lowerRank.includes("silver")) return "bg-gray-500"
-    return "bg-orange-600"
-  }
-
-  if (loading) {
+  if (!isLoaded) {
     return (
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-8 text-center">
-          <p className="text-slate-400">Cargando perfiles...</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <Skeleton className="h-6 w-32" />
+          </CardTitle>
+          <CardDescription>
+            <Skeleton className="h-4 w-64" />
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="name">
+              <Skeleton className="h-4 w-20" />
+            </Label>
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="username">
+              <Skeleton className="h-4 w-20" />
+            </Label>
+            <Skeleton className="h-10 w-full" />
+          </div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-white flex items-center">
-          <Trophy className="mr-2 h-5 w-5 text-yellow-400" />
-          Perfiles de Gaming
-        </CardTitle>
-        {isOwnProfile && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Perfil
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-slate-800 border-slate-700">
-              <DialogHeader>
-                <DialogTitle className="text-white">
-                  {editingProfile ? "Editar Perfil" : "Agregar Perfil de Gaming"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Select value={formData.game} onValueChange={(value) => setFormData({ ...formData, game: value })}>
-                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                    <SelectValue placeholder="Selecciona un juego" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    {SUPPORTED_GAMES.map((game) => (
-                      <SelectItem key={game.id} value={game.id} className="text-white">
-                        {game.icon} {game.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  placeholder="Nombre de usuario en el juego"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Input
-                  placeholder="Rango actual (ej: Diamond III)"
-                  value={formData.rank}
-                  onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Input
-                  placeholder="URL de Tracker.gg (opcional)"
-                  value={formData.tracker_url}
-                  onChange={(e) => setFormData({ ...formData, tracker_url: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Button onClick={handleSaveProfile} className="w-full bg-purple-600 hover:bg-purple-700">
-                  {editingProfile ? "Actualizar Perfil" : "Guardar Perfil"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+    <Card>
+      <CardHeader>
+        <CardTitle>Gaming Profile</CardTitle>
+        <CardDescription>Manage your gaming profile and preferences.</CardDescription>
       </CardHeader>
-      <CardContent>
-        {Object.keys(profiles).length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(profiles).map(([gameId, profile]) => {
-              const gameInfo = SUPPORTED_GAMES.find((g) => g.id === gameId)
-              return (
-                <Card key={gameId} className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-2xl">{gameInfo?.icon}</span>
-                        <h3 className="font-semibold text-white">{gameInfo?.name}</h3>
-                      </div>
-                      {isOwnProfile && (
-                        <div className="flex space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditProfile(gameId, profile)}
-                            className="text-slate-400 hover:text-white h-8 w-8 p-0"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteProfile(gameId)}
-                            className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-sm text-slate-400">Usuario</p>
-                        <p className="text-white font-medium">{profile.username}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-400">Rango</p>
-                        <Badge className={`${getRankColor(profile.rank)} text-white`}>{profile.rank}</Badge>
-                      </div>
-                      {profile.tracker_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(profile.tracker_url, "_blank")}
-                          className="w-full border-slate-600 text-slate-300 hover:bg-slate-600"
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                          Ver en Tracker.gg
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Target className="h-12 w-12 mx-auto text-slate-600 mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">No hay perfiles de gaming</h3>
-            <p className="text-slate-400">
-              {isOwnProfile ? "¡Agrega tus perfiles de gaming!" : "Este usuario no ha agregado perfiles aún"}
-            </p>
-          </div>
-        )}
+      <CardContent className="grid gap-4">
+        <div className="grid gap-2">
+          <Label htmlFor="username">Username</Label>
+          <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="bio">Bio</Label>
+          <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} />
+        </div>
+        <div className="grid gap-2">
+          <Label>Favorite Games</Label>
+          <Input
+            id="favoriteGames"
+            value={favoriteGames.join(", ")}
+            onChange={(e) => setFavoriteGames(e.target.value.split(",").map((s) => s.trim()))}
+            placeholder="Enter your favorite games, separated by commas"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="lookingForGroup">Looking for Group?</Label>
+          <Switch
+            id="lookingForGroup"
+            checked={lookingForGroup}
+            onCheckedChange={(checked) => setLookingForGroup(checked)}
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="skillLevel">Skill Level</Label>
+          <Slider
+            id="skillLevel"
+            defaultValue={[skillLevel]}
+            max={100}
+            step={1}
+            onValueChange={(value) => setSkillLevel(value[0])}
+          />
+          <Badge variant="secondary">Level: {skillLevel}</Badge>
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="platform">Platform</Label>
+          <Select value={platform} onValueChange={(value) => setPlatform(value)}>
+            <SelectTrigger id="platform">
+              <SelectValue placeholder="Select a platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PC">PC</SelectItem>
+              <SelectItem value="PlayStation">PlayStation</SelectItem>
+              <SelectItem value="Xbox">Xbox</SelectItem>
+              <SelectItem value="Nintendo Switch">Nintendo Switch</SelectItem>
+              <SelectItem value="Mobile">Mobile</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardContent>
+      <CardFooter>
+        <Button onClick={handleSaveProfile} disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save Profile"}
+        </Button>
+      </CardFooter>
     </Card>
   )
 }
-"use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, ExternalLink, Edit2, Trash2, Trophy, Target } from "lucide-react"
-import { useAuth } from "@/components/auth-provider-supabase"
-
-interface GamingProfile {
-  game: string
-  username: string
-  rank: string
-  tracker_url: string
-}
-
-interface GamingProfilesProps {
-  userId?: string
-  isOwnProfile?: boolean
-}
-
-const SUPPORTED_GAMES = [
-  { id: "valorant", name: "Valorant", icon: "🎯" },
-  { id: "league", name: "League of Legends", icon: "⚔️" },
-  { id: "csgo", name: "CS:GO", icon: "🔫" },
-  { id: "apex", name: "Apex Legends", icon: "🏆" },
-  { id: "overwatch", name: "Overwatch 2", icon: "🎮" },
-  { id: "rocket", name: "Rocket League", icon: "🚗" },
-]
-
-export function GamingProfiles({ userId, isOwnProfile = false }: GamingProfilesProps) {
-  const { user } = useAuth()
-  const [profiles, setProfiles] = useState<Record<string, GamingProfile>>({})
-  const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingProfile, setEditingProfile] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    game: "",
-    username: "",
-    rank: "",
-    tracker_url: "",
-  })
-
-  useEffect(() => {
-    fetchGamingProfiles()
-  }, [userId, user])
-
-  const fetchGamingProfiles = async () => {
-    try {
-      const targetUserId = userId || user?.id
-      if (!targetUserId) return
-
-      const response = await fetch(`/api/user/gaming-profiles?userId=${targetUserId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProfiles(data.gaming_profiles || {})
-      }
-    } catch (error) {
-      console.error("Error al cargar perfiles de gaming:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSaveProfile = async () => {
-    try {
-      const payload = editingProfile ? { ...formData, game: editingProfile } : formData
-
-      const response = await fetch("/api/user/gaming-profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-
-      if (response.ok) {
-        setFormData({ game: "", username: "", rank: "", tracker_url: "" })
-        setDialogOpen(false)
-        setEditingProfile(null)
-        fetchGamingProfiles()
-      }
-    } catch (error) {
-      console.error("Error al guardar perfil:", error)
-    }
-  }
-
-  const handleDeleteProfile = async (game: string) => {
-    try {
-      const response = await fetch(`/api/user/gaming-profiles/${game}`, {
-        method: "DELETE",
-      })
-
-      if (response.ok) {
-        const newProfiles = { ...profiles }
-        delete newProfiles[game]
-        setProfiles(newProfiles)
-      }
-    } catch (error) {
-      console.error("Error al eliminar perfil:", error)
-    }
-  }
-
-  const handleEditProfile = (game: string, profile: GamingProfile) => {
-    setFormData(profile)
-    setEditingProfile(game)
-    setDialogOpen(true)
-  }
-
-  const getRankColor = (rank: string) => {
-    const lowerRank = rank.toLowerCase()
-    if (lowerRank.includes("radiant") || lowerRank.includes("challenger")) return "bg-red-600"
-    if (lowerRank.includes("immortal") || lowerRank.includes("grandmaster")) return "bg-purple-600"
-    if (lowerRank.includes("diamond") || lowerRank.includes("master")) return "bg-blue-600"
-    if (lowerRank.includes("platinum") || lowerRank.includes("emerald")) return "bg-green-600"
-    if (lowerRank.includes("gold")) return "bg-yellow-600"
-    if (lowerRank.includes("silver")) return "bg-gray-500"
-    return "bg-orange-600"
-  }
-
-  if (loading) {
-    return (
-      <Card className="bg-slate-800 border-slate-700">
-        <CardContent className="p-8 text-center">
-          <p className="text-slate-400">Cargando perfiles...</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="bg-slate-800 border-slate-700">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-white flex items-center">
-          <Trophy className="mr-2 h-5 w-5 text-yellow-400" />
-          Perfiles de Gaming
-        </CardTitle>
-        {isOwnProfile && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Perfil
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-slate-800 border-slate-700">
-              <DialogHeader>
-                <DialogTitle className="text-white">
-                  {editingProfile ? "Editar Perfil" : "Agregar Perfil de Gaming"}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Select value={formData.game} onValueChange={(value) => setFormData({ ...formData, game: value })}>
-                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                    <SelectValue placeholder="Selecciona un juego" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    {SUPPORTED_GAMES.map((game) => (
-                      <SelectItem key={game.id} value={game.id} className="text-white">
-                        {game.icon} {game.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Input
-                  placeholder="Nombre de usuario en el juego"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Input
-                  placeholder="Rango actual (ej: Diamond III)"
-                  value={formData.rank}
-                  onChange={(e) => setFormData({ ...formData, rank: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Input
-                  placeholder="URL de Tracker.gg (opcional)"
-                  value={formData.tracker_url}
-                  onChange={(e) => setFormData({ ...formData, tracker_url: e.target.value })}
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-
-                <Button onClick={handleSaveProfile} className="w-full bg-purple-600 hover:bg-purple-700">
-                  {editingProfile ? "Actualizar Perfil" : "Guardar Perfil"}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-      </CardHeader>
-      <CardContent>
-        {Object.keys(profiles).length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(profiles).map(([gameId, profile]) => {
-              const gameInfo = SUPPORTED_GAMES.find((g) => g.id === gameId)
-              return (
-                <Card key={gameId} className="bg-slate-700 border-slate-600">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-2xl">{gameInfo?.icon}</span>
-                        <h3 className="font-semibold text-white">{gameInfo?.name}</h3>
-                      </div>
-                      {isOwnProfile && (
-                        <div className="flex space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleEditProfile(gameId, profile)}
-                            className="text-slate-400 hover:text-white h-8 w-8 p-0"
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteProfile(gameId)}
-                            className="text-red-400 hover:text-red-300 h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div>
-                        <p className="text-sm text-slate-400">Usuario</p>
-                        <p className="text-white font-medium">{profile.username}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-400">Rango</p>
-                        <Badge className={`${getRankColor(profile.rank)} text-white`}>{profile.rank}</Badge>
-                      </div>
-                      {profile.tracker_url && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(profile.tracker_url, "_blank")}
-                          className="w-full border-slate-600 text-slate-300 hover:bg-slate-600"
-                        >
-                          <ExternalLink className="mr-2 h-3 w-3" />
-                          Ver en Tracker.gg
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <Target className="h-12 w-12 mx-auto text-slate-600 mb-4" />
-            <h3 className="text-lg font-semibold text-white mb-2">No hay perfiles de gaming</h3>
-            <p className="text-slate-400">
-              {isOwnProfile ? "¡Agrega tus perfiles de gaming!" : "Este usuario no ha agregado perfiles aún"}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+export default GamingProfiles
