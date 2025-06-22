@@ -57,8 +57,10 @@ export function UserProfile() {
   // Editing states
   const [editingName, setEditingName] = useState(false)
   const [editingUsername, setEditingUsername] = useState(false)
+  const [editingBio, setEditingBio] = useState(false)
   const [newName, setNewName] = useState("")
   const [newUsername, setNewUsername] = useState("")
+  const [newBio, setNewBio] = useState("")
   const [updating, setUpdating] = useState(false)
 
   const USERNAME_CHANGE_LIMIT = 2
@@ -83,6 +85,7 @@ export function UserProfile() {
         setProfile(profileData.user)
         setNewName(profileData.user.name || "")
         setNewUsername(profileData.user.username || "")
+        setNewBio(profileData.user.bio || "")
         setStats((prev) => ({
           ...prev,
           level: profileData.user.level || 1,
@@ -107,6 +110,7 @@ export function UserProfile() {
           setProfile(fallbackProfile)
           setNewName(fallbackProfile.name || "")
           setNewUsername(fallbackProfile.username || "")
+          setNewBio("")
         }
       }
     } catch (error) {
@@ -215,18 +219,16 @@ export function UserProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex justify-center items-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-cyan-400 mx-auto mb-4" />
-          <p className="text-slate-300">Cargando perfil...</p>
-        </div>
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-400" />
+        <span className="ml-2 text-white">Cargando perfil...</span>
       </div>
     )
   }
 
     if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center">
         <Card className="bg-slate-800 border-slate-700 p-8">
           <CardContent>
             <h1 className="text-2xl font-bold text-white mb-4">Inicia sesión para ver tu perfil</h1>
@@ -241,7 +243,7 @@ export function UserProfile() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="container mx-auto px-4 py-8 flex items-center justify-center">
         <Card className="bg-slate-800 border-slate-700 p-8">
           <CardContent>
             <h1 className="text-2xl font-bold text-white mb-4">Error al cargar el perfil</h1>
@@ -256,8 +258,7 @@ export function UserProfile() {
   }
 
   return (
-    //<div className="min-h-screen bg-slate-950">
-      <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="relative mb-8">
           <div className="h-48 bg-slate-800 rounded-t-lg border-x border-t border-slate-700"></div>
@@ -534,7 +535,6 @@ export function UserProfile() {
             <GamingProfiles />
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   )
 }
