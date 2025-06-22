@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch" // <-- Importamos el nuevo componente
 import { useAuth } from "@/components/auth-provider-supabase"
 import { Gamepad2, Save, Trash2, Plus, Link as LinkIcon, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -18,12 +19,15 @@ interface GameProfile {
   username: string;
   rank?: string;
   tracker_url?: string;
+  no_rank?: boolean; // <-- Nuevo campo para manejar el estado del switch
 }
 
 const gameRanks: { [key: string]: string[] } = {
   "Valorant": ["Hierro", "Bronce", "Plata", "Oro", "Platino", "Diamante", "Ascendente", "Inmortal", "Radiante"],
   "League of Legends": ["Hierro", "Bronce", "Plata", "Oro", "Platino", "Esmeralda", "Diamante", "Maestro", "Gran Maestro", "Aspirante"],
   "Counter-Strike 2": ["Plata", "Oro Nova", "Maestro Guardián", "Sheriff", "Águila", "Maestro Supremo", "Global Élite"],
+  "Fortnite": ["Bronce", "Plata", "Oro", "Platino", "Diamante", "Élite", "As", "Unreal"],
+  "Minecraft": [], // Un array vacío indica que por defecto no tiene rangos
 };
 
 const predefinedGames = Object.keys(gameRanks);
@@ -69,14 +73,17 @@ export function GamingProfiles() {
     setMessage("")
     setError(null)
     try {
+      // Limpiamos el rango si el switch "sin rango" está activado
+      const profilesToSave = editingProfiles.map(p => p.no_rank ? { ...p, rank: '' } : p);
+
       const response = await fetch('/api/user/gaming-profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, profiles: editingProfiles }),
+        body: JSON.stringify({ userId: user.id, profiles: profilesToSave }),
       });
       if (response.ok) {
         setMessage("Perfiles guardados con éxito.")
-        setProfiles(editingProfiles)
+        setProfiles(profilesToSave)
         setIsEditing(false)
       } else {
         const errorData = await response.json();
@@ -91,17 +98,22 @@ export function GamingProfiles() {
 
   // --- MANEJO DEL FORMULARIO DE EDICIÓN ---
   const handleAddProfile = () => {
-    setEditingProfiles([...editingProfiles, { game: "", username: "", rank: "", tracker_url: "" }])
+    setEditingProfiles([...editingProfiles, { game: "", username: "", rank: "", tracker_url: "", no_rank: false }])
   }
 
-  const handleProfileChange = (index: number, field: keyof GameProfile, value: string) => {
+  const handleProfileChange = (index: number, field: keyof GameProfile, value: string | boolean) => {
     const newProfiles = [...editingProfiles]
     const profileToUpdate = { ...newProfiles[index], [field]: value };
 
-    if (field === 'game' && !predefinedGames.includes(value)) {
-        profileToUpdate.rank = ''; // Limpia el rango si el juego no es predefinido
+    if (field === 'game') {
+        profileToUpdate.rank = '';
+        profileToUpdate.no_rank = gameRanks[value as string]?.length === 0;
     }
     
+    if (field === 'no_rank' && value === true) {
+        profileToUpdate.rank = '';
+    }
+
     newProfiles[index] = profileToUpdate;
     setEditingProfiles(newProfiles)
   }
@@ -141,7 +153,7 @@ export function GamingProfiles() {
         {message && <div className="text-green-400 text-sm">{message}</div>}
         {error && <div className="text-red-400 text-sm">{error}</div>}
 
-        {/* MODO VISUALIZACIÓN */}
+        {/* --- MODO VISUALIZACIÓN --- */}
         {!isEditing && (
           <div className="space-y-3">
             {profiles.length > 0 ? (
@@ -154,7 +166,7 @@ export function GamingProfiles() {
                      </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    {profile.rank && <Badge variant="secondary">{profile.rank}</Badge>}
+                    {profile.rank ? <Badge variant="secondary">{profile.rank}</Badge> : <Badge variant="outline">Sin Rango</Badge>}
                     {profile.tracker_url && (
                         <Link href={profile.tracker_url} target="_blank" rel="noopener noreferrer">
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-400 hover:text-cyan-300">
@@ -171,82 +183,96 @@ export function GamingProfiles() {
           </div>
         )}
 
-        {/* MODO EDICIÓN */}
+        {/* --- MODO EDICIÓN --- */}
         {isEditing && (
           <div className="space-y-4">
             {editingProfiles.map((profile, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-slate-700 rounded-lg relative">
+              <div key={index} className="space-y-4 p-4 border border-slate-700 rounded-lg relative">
                  <Button variant="ghost" size="icon" onClick={() => handleRemoveProfile(index)} className="absolute top-1 right-1 h-7 w-7 text-slate-400 hover:bg-red-500/20 hover:text-red-400">
                    <Trash2 className="h-4 w-4" />
                  </Button>
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <Label className="text-white">Juego</Label>
-                   <Select
-                      value={predefinedGames.includes(profile.game) ? profile.game : 'Otro'}
-                      onValueChange={(value) => handleProfileChange(index, 'game', value === 'Otro' ? '' : value)}
-                    >
-                      <SelectTrigger className="bg-slate-700 border-slate-600">
-                        <SelectValue placeholder="Selecciona un juego" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                        {predefinedGames.map(game => (
-                          <SelectItem key={game} value={game}>{game}</SelectItem>
-                        ))}
-                        <SelectItem value="Otro">Otro...</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {!predefinedGames.includes(profile.game) && (
-                        <Input
-                            value={profile.game}
-                            onChange={(e) => handleProfileChange(index, 'game', e.target.value)}
-                            placeholder="Nombre del juego"
-                            className="bg-slate-700 border-slate-600 mt-2"
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white">Juego</Label>
+                       <Select
+                          value={predefinedGames.includes(profile.game) ? profile.game : 'Otro'}
+                          onValueChange={(value) => handleProfileChange(index, 'game', value === 'Otro' ? '' : value)}
+                        >
+                          <SelectTrigger className="bg-slate-700 border-slate-600">
+                            <SelectValue placeholder="Selecciona un juego" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                            {predefinedGames.map(game => (
+                              <SelectItem key={game} value={game}>{game}</SelectItem>
+                            ))}
+                            <SelectItem value="Otro">Otro...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!predefinedGames.includes(profile.game) && (
+                            <Input
+                                value={profile.game}
+                                onChange={(e) => handleProfileChange(index, 'game', e.target.value)}
+                                placeholder="Nombre del juego"
+                                className="bg-slate-700 border-slate-600 mt-2"
+                            />
+                        )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white">Username</Label>
+                      <Input
+                        value={profile.username}
+                        onChange={(e) => handleProfileChange(index, 'username', e.target.value)}
+                        placeholder="Tu nombre en el juego"
+                        className="bg-slate-700 border-slate-600"
+                      />
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-white">Rango</Label>
+                      <div className="flex items-center space-x-2">
+                           <Switch 
+                                id={`no-rank-${index}`} 
+                                checked={profile.no_rank}
+                                onCheckedChange={(checked) => handleProfileChange(index, 'no_rank', checked)}
+                           />
+                           <Label htmlFor={`no-rank-${index}`} className="text-sm text-slate-400">Este juego no tiene rango</Label>
+                      </div>
+                      {!profile.no_rank && (
+                          gameRanks[profile.game] ? (
+                            <Select
+                              value={profile.rank}
+                              onValueChange={(value) => handleProfileChange(index, 'rank', value)}
+                            >
+                              <SelectTrigger className="bg-slate-700 border-slate-600">
+                                <SelectValue placeholder="Selecciona tu rango" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                                {gameRanks[profile.game].map(rank => (
+                                  <SelectItem key={rank} value={rank}>{rank}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              value={profile.rank || ''}
+                              onChange={(e) => handleProfileChange(index, 'rank', e.target.value)}
+                              placeholder="Tu rango (si aplica)"
+                              className="bg-slate-700 border-slate-600"
+                            />
+                          )
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-white flex items-center"><LinkIcon className="h-3 w-3 mr-1"/> Enlace de Tracker</Label>
+                       <Input
+                          value={profile.tracker_url || ''}
+                          onChange={(e) => handleProfileChange(index, 'tracker_url', e.target.value)}
+                          placeholder="https://tracker.gg/..."
+                          className="bg-slate-700 border-slate-600"
                         />
-                    )}
-                </div>
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <Label className="text-white">Username</Label>
-                  <Input
-                    value={profile.username}
-                    onChange={(e) => handleProfileChange(index, 'username', e.target.value)}
-                    placeholder="Tu nombre en el juego"
-                    className="bg-slate-700 border-slate-600"
-                  />
-                </div>
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <Label className="text-white">Rango</Label>
-                  {gameRanks[profile.game] ? (
-                    <Select
-                      value={profile.rank}
-                      onValueChange={(value) => handleProfileChange(index, 'rank', value)}
-                    >
-                      <SelectTrigger className="bg-slate-700 border-slate-600">
-                        <SelectValue placeholder="Selecciona tu rango" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                        {gameRanks[profile.game].map(rank => (
-                          <SelectItem key={rank} value={rank}>{rank}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      value={profile.rank || ''}
-                      onChange={(e) => handleProfileChange(index, 'rank', e.target.value)}
-                      placeholder="Tu rango"
-                      className="bg-slate-700 border-slate-600"
-                    />
-                  )}
-                </div>
-                <div className="space-y-2 col-span-2 md:col-span-1">
-                  <Label className="text-white flex items-center"><LinkIcon className="h-3 w-3 mr-1"/> Enlace de Tracker</Label>
-                   <Input
-                      value={profile.tracker_url || ''}
-                      onChange={(e) => handleProfileChange(index, 'tracker_url', e.target.value)}
-                      placeholder="https://tracker.gg/..."
-                      className="bg-slate-700 border-slate-600"
-                    />
-                </div>
+                    </div>
+                 </div>
               </div>
             ))}
             <Button onClick={handleAddProfile} size="sm" variant="outline" className="w-full border-dashed">
