@@ -74,7 +74,7 @@ export function AuthProviderSupabase({ children }: { children: React.ReactNode }
     console.log(`Iniciando login con ${provider}...`)
 
     // FORZAR la URL correcta de Supabase
-    const redirectUrl = "https://ztmqoitwefclamzmizms.supabase.co/auth/v1/callback"
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
 
     console.log("Using redirect URL:", redirectUrl)
 
