@@ -12,12 +12,12 @@ import { Gamepad2, Save, Trash2, Plus, Link as LinkIcon, ExternalLink } from "lu
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
-
+// --- INTERFAZ Y DATOS ---
 interface GameProfile {
   game: string;
   username: string;
   rank?: string;
-  tracker_url?: string; // <-- Campo nuevo
+  tracker_url?: string;
 }
 
 const gameRanks: { [key: string]: string[] } = {
@@ -26,6 +26,7 @@ const gameRanks: { [key: string]: string[] } = {
   "Counter-Strike 2": ["Plata", "Oro Nova", "Maestro Guardián", "Sheriff", "Águila", "Maestro Supremo", "Global Élite"],
 };
 
+// --- COMPONENTE PRINCIPAL ---
 export function GamingProfiles() {
   const { user, loading: authLoading } = useAuth()
   const [profiles, setProfiles] = useState<GameProfile[]>([])
@@ -35,6 +36,7 @@ export function GamingProfiles() {
   const [message, setMessage] = useState("")
   const [error, setError] = useState<string | null>(null)
 
+  // --- LÓGICA DE DATOS ---
   useEffect(() => {
     if (user) {
       fetchGamingProfiles()
@@ -48,9 +50,9 @@ export function GamingProfiles() {
       const response = await fetch(`/api/user/gaming-profiles?userId=${user.id}`)
       if (response.ok) {
         const data = await response.json()
-        setProfiles(data.profiles || [])
-        // Inicializa el estado de edición con los perfiles existentes o un array vacío
-        setEditingProfiles(data.profiles && data.profiles.length > 0 ? data.profiles : []);
+        const fetchedProfiles = data.profiles || []
+        setProfiles(fetchedProfiles)
+        setEditingProfiles(fetchedProfiles.length > 0 ? fetchedProfiles : [])
       }
     } catch (error) {
       setError("Error al cargar los perfiles de juego.")
@@ -62,6 +64,8 @@ export function GamingProfiles() {
   const handleSaveChanges = async () => {
     if (!user) return
     setIsLoading(true)
+    setMessage("")
+    setError(null)
     try {
       const response = await fetch('/api/user/gaming-profiles', {
         method: 'POST',
@@ -82,6 +86,7 @@ export function GamingProfiles() {
     }
   }
 
+  // --- MANEJO DEL FORMULARIO DE EDICIÓN ---
   const handleAddProfile = () => {
     setEditingProfiles([...editingProfiles, { game: "", username: "", rank: "", tracker_url: "" }])
   }
@@ -103,6 +108,7 @@ export function GamingProfiles() {
     setEditingProfiles(newProfiles)
   }
 
+  // --- RENDERIZADO ---
   if (authLoading) {
     return <Skeleton className="h-48 w-full bg-slate-700" />
   }
@@ -132,7 +138,7 @@ export function GamingProfiles() {
         {message && <div className="text-green-400 text-sm">{message}</div>}
         {error && <div className="text-red-400 text-sm">{error}</div>}
 
-        {/* MODO VISUALIZACIÓN */}
+        {/* --- MODO VISUALIZACIÓN --- */}
         {!isEditing && (
           <div className="space-y-3">
             {profiles.length > 0 ? (
@@ -162,7 +168,7 @@ export function GamingProfiles() {
           </div>
         )}
 
-        {/* MODO EDICIÓN */}
+        {/* --- MODO EDICIÓN --- */}
         {isEditing && (
           <div className="space-y-4">
             {editingProfiles.map((profile, index) => (
