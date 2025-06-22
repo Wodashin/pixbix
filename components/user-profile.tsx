@@ -232,7 +232,7 @@ export function UserProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950">
+    //<div className="min-h-screen bg-slate-950">
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="relative mb-8">
