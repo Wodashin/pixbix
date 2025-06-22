@@ -46,18 +46,14 @@ export async function PUT(request: Request) {
 
         const updates = await request.json()
 
-        // Validar si se está actualizando el username para verificar si ya existe
+        // Lógica para el límite de cambio de nombre
         if (updates.username) {
-            const { data: existingUser } = await supabase
-                .from("users")
-                .select("id")
-                .eq("username", updates.username)
-                .neq("id", user.id)
-                .single()
-
-            if (existingUser) {
-                return NextResponse.json({ error: "Este nombre de usuario ya está en uso" }, { status: 400 })
+            const { data: currentUser } = await supabase.from("users").select('username_change_count').eq('id', user.id).single();
+            
+            if (currentUser && currentUser.username_change_count >= 2) {
+                return NextResponse.json({ error: "Ya has alcanzado el límite de cambios de nombre de usuario." }, { status: 400 });
             }
+            updates.username_change_count = (currentUser?.username_change_count || 0) + 1;
         }
 
         const { data: updatedProfile, error: updateError } = await supabase
