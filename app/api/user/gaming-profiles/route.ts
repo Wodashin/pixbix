@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 
-// (La función GET se mantiene igual)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -26,15 +25,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Error al obtener perfiles" }, { status: 500 })
     }
 
+    // ¡CAMBIO CLAVE! Devolvemos el array directamente.
     return NextResponse.json({ profiles: profiles || [] })
+
   } catch (error) {
     console.error("Error en API de perfiles de gaming:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
-
-// ¡ESTA ES LA FUNCIÓN CORREGIDA!
+// (El resto del archivo, la función POST, se mantiene igual)
 export async function POST(request: Request) {
   try {
     const supabase = createClient()
@@ -50,7 +50,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Se esperaba un array de perfiles" }, { status: 400 });
     }
 
-    // Primero, eliminamos los perfiles existentes para este usuario para evitar duplicados
     const { error: deleteError } = await supabase
       .from('user_gaming_profiles')
       .delete()
@@ -61,14 +60,16 @@ export async function POST(request: Request) {
       throw deleteError
     }
     
-    // Ahora, insertamos los nuevos perfiles
-    const profilesToInsert = profiles.map(profile => ({
-      user_id: user.id,
-      game: profile.game,
-      username: profile.username,
-      rank: profile.rank,
-      updated_at: new Date().toISOString(),
-    }));
+    const profilesToInsert = profiles
+        .filter(profile => profile.game && profile.game.trim() !== "")
+        .map(profile => ({
+            user_id: user.id,
+            game: profile.game,
+            username: profile.username,
+            rank: profile.rank,
+            tracker_url: profile.tracker_url,
+            updated_at: new Date().toISOString(),
+        }));
 
     if (profilesToInsert.length > 0) {
         const { error: upsertError } = await supabase
@@ -81,7 +82,6 @@ export async function POST(request: Request) {
           throw upsertError
         }
     }
-
 
     return NextResponse.json({ success: true, message: "Perfiles guardados correctamente" })
   } catch (error) {
