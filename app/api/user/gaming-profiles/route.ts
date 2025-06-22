@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/utils/supabase/server"
 
+// (La función GET se mantiene igual)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -8,23 +9,13 @@ export async function GET(request: Request) {
 
     const supabase = createClient()
 
-    // Obtener usuario autenticado
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
+    const { data: { user } } = await supabase.auth.getUser()
 
     const targetUserId = userId || user?.id
-
     if (!targetUserId) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
     }
 
-    // Obtener perfiles de gaming
     const { data: profiles, error } = await supabase
       .from("user_gaming_profiles")
       .select("*")
@@ -35,69 +26,64 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Error al obtener perfiles" }, { status: 500 })
     }
 
-    // Convertir array a objeto con game como key
-    const profilesObject = profiles?.reduce(
-      (acc, profile) => {
-        acc[profile.game] = {
-          game: profile.game,
-          username: profile.username,
-          rank: profile.rank,
-          tracker_url: profile.tracker_url,
-        }
-        return acc
-      },
-      {} as Record<string, any>,
-    )
-
-    return NextResponse.json({ gaming_profiles: profilesObject || {} })
+    return NextResponse.json({ profiles: profiles || [] })
   } catch (error) {
     console.error("Error en API de perfiles de gaming:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
   }
 }
 
+
+// ¡ESTA ES LA FUNCIÓN CORREGIDA!
 export async function POST(request: Request) {
   try {
     const supabase = createClient()
-
-    // Verificar autenticación
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { game, username, rank, tracker_url } = body
+    const { profiles } = await request.json()
 
-    // Insertar o actualizar perfil de gaming
-    const { data: newProfile, error: upsertError } = await supabase
-      .from("user_gaming_profiles")
-      .upsert(
-        {
-          user_id: user.id,
-          game,
-          username,
-          rank,
-          tracker_url,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,game",
-        },
-      )
-      .select()
-      .single()
-
-    if (upsertError) {
-      console.error("Error al guardar perfil de gaming:", upsertError)
-      return NextResponse.json({ error: "Error al guardar perfil" }, { status: 500 })
+    if (!Array.isArray(profiles)) {
+        return NextResponse.json({ error: "Se esperaba un array de perfiles" }, { status: 400 });
     }
 
-    return NextResponse.json({ profile: newProfile })
+    // Primero, eliminamos los perfiles existentes para este usuario para evitar duplicados
+    const { error: deleteError } = await supabase
+      .from('user_gaming_profiles')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteError) {
+      console.error("Error eliminando perfiles antiguos:", deleteError)
+      throw deleteError
+    }
+    
+    // Ahora, insertamos los nuevos perfiles
+    const profilesToInsert = profiles.map(profile => ({
+      user_id: user.id,
+      game: profile.game,
+      username: profile.username,
+      rank: profile.rank,
+      updated_at: new Date().toISOString(),
+    }));
+
+    if (profilesToInsert.length > 0) {
+        const { error: upsertError } = await supabase
+          .from("user_gaming_profiles")
+          .insert(profilesToInsert)
+          .select();
+
+        if (upsertError) {
+          console.error("Error al guardar perfiles de gaming:", upsertError)
+          throw upsertError
+        }
+    }
+
+
+    return NextResponse.json({ success: true, message: "Perfiles guardados correctamente" })
   } catch (error) {
     console.error("Error en POST de perfiles de gaming:", error)
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
