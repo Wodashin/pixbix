@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/components/auth-provider-supabase"
 import { UserGallery } from "@/components/user-gallery"
-import { GamingProfiles } from "@/components/gaming-profiles"
 import { toast } from "@/hooks/use-toast"
 import { Loader2, Edit3, Check, X, Mail, Calendar, Crown, Settings, MessageSquare, User, Activity } from "lucide-react"
 
