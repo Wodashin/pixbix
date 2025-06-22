@@ -27,6 +27,7 @@ interface UserProfile {
   website: string | null
   created_at: string
   updated_at: string
+  username_change_count: number
 }
 
 interface UserStats {
@@ -55,10 +56,12 @@ export function UserProfile() {
 
   // Editing states
   const [editingName, setEditingName] = useState(false)
-  const [editingBio, setEditingBio] = useState(false)
+  const [editingUsername, setEditingUsername] = useState(false)
   const [newName, setNewName] = useState("")
-  const [newBio, setNewBio] = useState("")
+  const [newUsername, setNewUsername] = useState("")
   const [updating, setUpdating] = useState(false)
+
+  const USERNAME_CHANGE_LIMIT = 2
 
   useEffect(() => {
     if (user) {
@@ -73,22 +76,18 @@ export function UserProfile() {
       setLoading(true)
       setError(null)
 
-      // Try to load profile
       const profileResponse = await fetch("/api/user/profile")
 
       if (profileResponse.ok) {
         const profileData = await profileResponse.json()
         setProfile(profileData.user)
         setNewName(profileData.user.name || "")
-        setNewBio(profileData.user.bio || "")
-
-        // Update stats with real level
+        setNewUsername(profileData.user.username || "")
         setStats((prev) => ({
           ...prev,
           level: profileData.user.level || 1,
         }))
       } else {
-        // Create fallback profile from auth user
         if (user) {
           const fallbackProfile: UserProfile = {
             id: user.id,
@@ -103,10 +102,11 @@ export function UserProfile() {
             website: null,
             created_at: user.created_at || new Date().toISOString(),
             updated_at: new Date().toISOString(),
+            username_change_count: 0,
           }
           setProfile(fallbackProfile)
           setNewName(fallbackProfile.name || "")
-          setNewBio("")
+          setNewUsername(fallbackProfile.username || "")
         }
       }
     } catch (error) {
@@ -122,9 +122,7 @@ export function UserProfile() {
     try {
       const response = await fetch("/api/user/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       })
 
@@ -137,10 +135,10 @@ export function UserProfile() {
         })
         return true
       } else {
-        const error = await response.json()
+        const errorData = await response.json()
         toast({
           title: "Error",
-          description: error.error || "Error al actualizar perfil",
+          description: errorData.error || "Error al actualizar perfil",
           variant: "destructive",
         })
         return false
@@ -157,6 +155,32 @@ export function UserProfile() {
       setUpdating(false)
     }
   }
+
+    const handleUsernameUpdate = async () => {
+        if (!newUsername.trim() || newUsername === profile?.username) {
+            setEditingUsername(false)
+            return
+        }
+
+        if (profile && profile.username_change_count >= USERNAME_CHANGE_LIMIT) {
+            toast({
+                title: "Límite alcanzado",
+                description: "Ya has cambiado tu nombre de usuario el máximo de veces permitido.",
+                variant: "destructive",
+            })
+            setEditingUsername(false)
+            return
+        }
+
+        const success = await updateProfile({
+            username: newUsername.trim(),
+            username_change_count: (profile?.username_change_count || 0) + 1,
+        })
+        if (success) {
+            setEditingUsername(false)
+        }
+    }
+
 
   const handleNameUpdate = async () => {
     if (!newName.trim()) {
