@@ -50,37 +50,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Se esperaba un array de perfiles" }, { status: 400 });
     }
 
-    const { error: deleteError } = await supabase
-      .from('user_gaming_profiles')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (deleteError) {
-      console.error("Error eliminando perfiles antiguos:", deleteError)
-      throw deleteError
-    }
+    await supabase.from('user_gaming_profiles').delete().eq('user_id', user.id);
     
     const profilesToInsert = profiles
-        .filter(profile => profile.game && profile.game.trim() !== "")
+        .filter(p => p.game && p.username)
         .map(profile => ({
             user_id: user.id,
             game: profile.game,
             username: profile.username,
             rank: profile.rank,
-            tracker_url: profile.tracker_url,
-            updated_at: new Date().toISOString(),
+            tracker_url: profile.tracker_url, // <-- DATO AÑADIDO
         }));
 
     if (profilesToInsert.length > 0) {
-        const { error: upsertError } = await supabase
-          .from("user_gaming_profiles")
-          .insert(profilesToInsert)
-          .select();
-
-        if (upsertError) {
-          console.error("Error al guardar perfiles de gaming:", upsertError)
-          throw upsertError
-        }
+        const { error: upsertError } = await supabase.from("user_gaming_profiles").insert(profilesToInsert);
+        if (upsertError) throw upsertError;
     }
 
     return NextResponse.json({ success: true, message: "Perfiles guardados correctamente" })
