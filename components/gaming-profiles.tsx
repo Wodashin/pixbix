@@ -25,7 +25,7 @@ interface GamingProfile {
   platform: string
 }
 
-export default function GamingProfiles() {
+export function GamingProfiles() {
   const { user, loading: authLoading } = useAuth()
   const [gamingProfile, setGamingProfile] = useState<GamingProfile | null>(null)
   const [username, setUsername] = useState("")
