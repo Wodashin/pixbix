@@ -60,8 +60,10 @@ export async function POST(request: NextRequest) {
 
     // --- Construcción de la URL Pública ---
     // Asegúrate de que esta variable de entorno esté configurada en Vercel
-    const publicUrlBase =
-      process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL || `https://pub-e8d3b4b205fb43f594d31b93a69f016.r2.dev`
+    const publicUrlBase = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_PUBLIC_URL
+if (!publicUrlBase) {
+  throw new Error("La URL pública de R2 no está configurada en las variables de entorno.")
+}
     const publicUrl = `${publicUrlBase}/${fileName}`
 
     return NextResponse.json({ url: publicUrl })
