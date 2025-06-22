@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
   try {
-    // Rutas públicas que no requieren autenticación
     const publicRoutes = [
       "/",
       "/login",
@@ -11,19 +10,24 @@ export async function middleware(request: NextRequest) {
       "/forgot-password",
       "/auth/callback",
       "/comunidad",
-      "/compañeros", // Ruta con ñ
-      "/companeros", // Versión sin ñ por si acaso
+      "/compañeros",
+      "/companeros",
       "/noticias",
       "/eventos",
       "/marketplace",
       "/debug",
-      "/error", // Página de error
+      "/error",
+      // Agrega aquí cualquier otra ruta pública
+      "/accesibilidad", //
+      "/privacidad", //
+      "/seguridad", //
+      "/terminos", //
+      "/sitemap", //
+      "/desarrolladores", //
+      "/configuracion", //
     ]
 
-    // Verificar si la ruta actual es pública
     const url = request.nextUrl.pathname
-    console.log("Middleware - Processing URL:", url)
-
     const isPublicRoute = publicRoutes.some(
       (route) =>
         url === route ||
@@ -31,10 +35,8 @@ export async function middleware(request: NextRequest) {
         url.startsWith("/_next/") ||
         url.startsWith("/auth/") ||
         url.includes("favicon") ||
-        url.includes("."), // Static files
+        url.includes("."),
     )
-
-    console.log("Middleware - Is public route:", isPublicRoute)
 
     let supabaseResponse = NextResponse.next({
       request,
@@ -59,7 +61,6 @@ export async function middleware(request: NextRequest) {
       },
     )
 
-    // Obtener el usuario (esto actualiza la sesión automáticamente)
     const {
       data: { user },
       error: authError,
@@ -69,41 +70,23 @@ export async function middleware(request: NextRequest) {
       console.log("Middleware - Auth error:", authError.message)
     }
 
-    console.log("Middleware - Has user:", !!user)
-
-    // Si es una ruta pública, permitir acceso independientemente del estado de autenticación
-    if (isPublicRoute) {
-      console.log("Middleware - Allowing public route")
-      return supabaseResponse
-    }
-
-    // Para rutas protegidas, verificar si hay usuario
     if (!user) {
-      console.log("Middleware - Redirecting to login")
-      // Redirigir a login si no hay usuario en ruta protegida
-      const loginUrl = request.nextUrl.clone()
-      loginUrl.pathname = "/login"
-      loginUrl.searchParams.set("redirectTo", url)
-      return NextResponse.redirect(loginUrl)
+      console.log("Middleware - Redirecting unauthenticated user from protected route")
+      // Opción A: Redirigir a la página principal
+      return NextResponse.redirect(new URL("/", request.url))
+      // Opción B: Redirigir a una página de "acceso denegado"
+      // return NextResponse.redirect(new URL("/acceso-denegado", request.url))
     }
 
     return supabaseResponse
   } catch (error) {
     console.error("Middleware error:", error)
-    // En caso de error, permitir el acceso pero logear el error
     return NextResponse.next()
   }
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 }
