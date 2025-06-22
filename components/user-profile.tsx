@@ -236,8 +236,8 @@ export function UserProfile() {
       <div className="container mx-auto px-4 py-8">
         {/* Profile Header */}
         <div className="relative mb-8">
-          <div className="h-48 bg-gradient-to-r from-cyan-500/20 to-purple-600/20 rounded-t-lg"></div>
-          <div className="bg-slate-800 border border-slate-700 rounded-b-lg p-6 -mt-16 relative">
+          <div className="h-48 bg-slate-800 rounded-t-lg border-x border-t border-slate-700"></div>
+          <div className="bg-slate-800 border-x border-b border-slate-700 rounded-b-lg p-6 -mt-16 relative">
             <div className="flex flex-col md:flex-row items-start md:items-end space-y-4 md:space-y-0 md:space-x-6">
               <Avatar className="h-32 w-32 border-4 border-cyan-400 bg-slate-700">
                 <AvatarImage src={profile.image || ""} alt={profile.name || "User"} />
