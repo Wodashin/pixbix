@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import GamingProfiles from "@/components/gaming-profiles"
+import {GamingProfiles} from "@/components/gaming-profiles"
 
 export default function GamingProfilePage() {
   return (
