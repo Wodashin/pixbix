@@ -26,6 +26,8 @@ const gameRanks: { [key: string]: string[] } = {
   "Counter-Strike 2": ["Plata", "Oro Nova", "Maestro Guardián", "Sheriff", "Águila", "Maestro Supremo", "Global Élite"],
 };
 
+const predefinedGames = Object.keys(gameRanks);
+
 // --- COMPONENTE PRINCIPAL ---
 export function GamingProfiles() {
   const { user, loading: authLoading } = useAuth()
@@ -77,7 +79,8 @@ export function GamingProfiles() {
         setProfiles(editingProfiles)
         setIsEditing(false)
       } else {
-        setError("Error al guardar los perfiles.")
+        const errorData = await response.json();
+        setError(errorData.error || "Error al guardar los perfiles.")
       }
     } catch (err) {
       setError("Error de conexión al guardar perfiles.")
@@ -95,8 +98,8 @@ export function GamingProfiles() {
     const newProfiles = [...editingProfiles]
     const profileToUpdate = { ...newProfiles[index], [field]: value };
 
-    if (field === 'game') {
-        profileToUpdate.rank = '';
+    if (field === 'game' && !predefinedGames.includes(value)) {
+        profileToUpdate.rank = ''; // Limpia el rango si el juego no es predefinido
     }
     
     newProfiles[index] = profileToUpdate;
@@ -138,7 +141,7 @@ export function GamingProfiles() {
         {message && <div className="text-green-400 text-sm">{message}</div>}
         {error && <div className="text-red-400 text-sm">{error}</div>}
 
-        {/* --- MODO VISUALIZACIÓN --- */}
+        {/* MODO VISUALIZACIÓN */}
         {!isEditing && (
           <div className="space-y-3">
             {profiles.length > 0 ? (
@@ -168,7 +171,7 @@ export function GamingProfiles() {
           </div>
         )}
 
-        {/* --- MODO EDICIÓN --- */}
+        {/* MODO EDICIÓN */}
         {isEditing && (
           <div className="space-y-4">
             {editingProfiles.map((profile, index) => (
@@ -178,12 +181,28 @@ export function GamingProfiles() {
                  </Button>
                 <div className="space-y-2 col-span-2 md:col-span-1">
                   <Label className="text-white">Juego</Label>
-                  <Input
-                    value={profile.game}
-                    onChange={(e) => handleProfileChange(index, 'game', e.target.value)}
-                    placeholder="Ej: Valorant"
-                    className="bg-slate-700 border-slate-600"
-                  />
+                   <Select
+                      value={predefinedGames.includes(profile.game) ? profile.game : 'Otro'}
+                      onValueChange={(value) => handleProfileChange(index, 'game', value === 'Otro' ? '' : value)}
+                    >
+                      <SelectTrigger className="bg-slate-700 border-slate-600">
+                        <SelectValue placeholder="Selecciona un juego" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-white">
+                        {predefinedGames.map(game => (
+                          <SelectItem key={game} value={game}>{game}</SelectItem>
+                        ))}
+                        <SelectItem value="Otro">Otro...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!predefinedGames.includes(profile.game) && (
+                        <Input
+                            value={profile.game}
+                            onChange={(e) => handleProfileChange(index, 'game', e.target.value)}
+                            placeholder="Nombre del juego"
+                            className="bg-slate-700 border-slate-600 mt-2"
+                        />
+                    )}
                 </div>
                 <div className="space-y-2 col-span-2 md:col-span-1">
                   <Label className="text-white">Username</Label>
