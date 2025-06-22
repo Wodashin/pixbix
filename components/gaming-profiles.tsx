@@ -127,7 +127,7 @@ export function GamingProfiles() {
           {profiles.map((profile, index) => (
             <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-slate-700 rounded-lg">
               <div className="space-y-2">
-                <Label className="text-slate-300">Juego</Label>
+                <Label className="text-white">Juego</Label>
                 <Input
                   value={profile.game}
                   onChange={(e) => handleProfileChange(index, 'game', e.target.value)}
