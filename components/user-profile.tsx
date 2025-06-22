@@ -402,89 +402,79 @@ export function UserProfile() {
 
         {/* Information Tab */}
         <TabsContent value="information">
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
+    <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+            <CardTitle className="text-white flex items-center">
                 <User className="mr-2 h-5 w-5 text-cyan-400" />
                 Información del Perfil
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <label className="text-slate-400 text-sm">Nombre Completo</label>
-                <p className="text-white font-medium">{profile.name || "No especificado"}</p>
-              </div>
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            {/* Nombre */}
+            <div>
+                <label className="text-sm font-medium text-white">Nombre Completo</label>
+                <p className="text-slate-300">{profile.name || "No especificado"}</p>
+            </div>
 
-              <div>
-                <label className="text-slate-400 text-sm">Nombre de Usuario</label>
-                <p className="text-white font-medium">@{profile.username || "sin-usuario"}</p>
-              </div>
-
-              <div>
-                <label className="text-slate-400 text-sm">Biografía</label>
-                {editingBio ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={newBio}
-                      onChange={(e) => setNewBio(e.target.value)}
-                      className="bg-slate-700 border-slate-600 text-white"
-                      placeholder="Cuéntanos sobre ti..."
-                      rows={3}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleBioUpdate}
-                        disabled={updating}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setNewBio(profile.bio || "")
-                          setEditingBio(false)
-                        }}
-                        className="border-slate-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+            {/* Username Editable */}
+            <div>
+                <label className="text-sm font-medium text-white">Nombre de Usuario</label>
+                {editingUsername ? (
+                    <div className="flex items-center gap-2 mt-1">
+                        <Input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className="bg-slate-700 border-slate-600"/>
+                        <Button size="sm" onClick={handleUsernameUpdate} disabled={updating || profile.username_change_count >= 2} className="bg-green-600 hover:bg-green-700">
+                            {updating ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4" />}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingUsername(false)}><X className="h-4 w-4"/></Button>
                     </div>
-                  </div>
                 ) : (
-                  <div className="flex items-start gap-2">
-                    <p className="text-white font-medium flex-1">{profile.bio || "Sin biografía disponible"}</p>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingBio(true)}
-                      className="text-slate-400 hover:text-white p-1 h-auto"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                    <div className="flex items-center gap-2">
+                        <p className="text-slate-300">@{profile.username || "sin-usuario"}</p>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingUsername(true)} disabled={profile.username_change_count >= 2}>
+                            <Edit3 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 )}
-              </div>
+                <p className="text-xs text-slate-500 mt-1">Puedes cambiar tu nombre de usuario {2 - (profile.username_change_count || 0)} veces más.</p>
+            </div>
 
-              <div>
-                <label className="text-slate-400 text-sm">Email</label>
-                <p className="text-white font-medium">{profile.email}</p>
-              </div>
-
-              <div>
-                <label className="text-slate-400 text-sm">Nivel</label>
-                <p className="text-white font-medium">Nivel {profile.level}</p>
-              </div>
-
-              <div>
-                <label className="text-slate-400 text-sm">Rol</label>
-                <p className="text-white font-medium">{profile.role === "admin" ? "Administrador" : "Usuario"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Biografía Editable */}
+            <div>
+                <label className="text-sm font-medium text-white">Biografía</label>
+                {editingBio ? (
+                     <div className="space-y-2 mt-1">
+                        <Textarea value={newBio} onChange={(e) => setNewBio(e.target.value)} className="bg-slate-700 border-slate-600" rows={4}/>
+                        <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => setEditingBio(false)}>Cancelar</Button>
+                            <Button size="sm" onClick={handleBioUpdate} disabled={updating} className="bg-green-600 hover:bg-green-700">
+                                {updating ? "Guardando..." : "Guardar Bio"}
+                            </Button>
+                        </div>
+                     </div>
+                ) : (
+                    <div className="flex items-start gap-2">
+                        <p className="text-slate-300 flex-1 whitespace-pre-wrap">{profile.bio || "Aún no has añadido una biografía."}</p>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingBio(true)}>
+                           <Edit3 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
+            </div>
+            
+            {/* Convertirse en Compañero */}
+            <div className="border-t border-slate-700 pt-6">
+                 <label className="text-sm font-medium text-white">Modo Compañero</label>
+                 <div className="flex items-center justify-between mt-2">
+                    <p className="text-slate-400 text-sm">Activa esta opción para que otros puedan contratarte para jugar.</p>
+                    <Switch
+                        checked={profile.is_companion || false}
+                        onCheckedChange={handleCompanionToggle}
+                    />
+                 </div>
+            </div>
+        </CardContent>
+    </Card>
+</TabsContent>
 
         {/* Posts Tab */}
         <TabsContent value="posts">
