@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/components/auth-provider-supabase"
 import { UserGallery } from "@/components/user-gallery"
 import { GamingProfiles } from "@/components/gaming-profiles"
