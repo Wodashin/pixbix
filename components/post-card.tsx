@@ -1,5 +1,3 @@
-// wodashin/pixbix/pixbix-24b7b03b1b9ad2dde3e94f77fd7bbe44e49bba17/components/post-card.tsx
-
 "use client";
 
 import type React from "react";
