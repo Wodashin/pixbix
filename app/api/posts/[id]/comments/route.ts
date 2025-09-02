@@ -1,87 +1,83 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
+import { type NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
 
+// --- OBTENER COMENTARIOS DE UN POST (GET) ---
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const postId = params.id
+    const postId = params.id;
 
     if (!postId) {
-      return NextResponse.json({ error: "ID de post requerido" }, { status: 400 })
+      return NextResponse.json({ error: "ID de post requerido" }, { status: 400 });
     }
 
-    // Aquí iría la lógica para obtener comentarios del post
-    // Por ahora, devolvemos datos de ejemplo
-    const comments = [
-      {
-        id: "1",
-        content: "¡Gran post! Me encantó la información.",
-        author: {
-          name: "Usuario1",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        timestamp: new Date(Date.now() - 300000).toISOString(),
-        likes: 5,
-      },
-      {
-        id: "2",
-        content: "Muy interesante, gracias por compartir.",
-        author: {
-          name: "Usuario2",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-        timestamp: new Date(Date.now() - 600000).toISOString(),
-        likes: 3,
-      },
-    ]
+    const supabase = createClient();
 
-    return NextResponse.json({ comments })
+    // Consulta para obtener los comentarios y la información de sus autores
+    const { data: comments, error } = await supabase
+      .from("comments")
+      .select(`
+        *,
+        author:users (
+          display_name,
+          username,
+          avatar_url
+        )
+      `)
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true }); // Ordena para mostrar los más antiguos primero
+
+    if (error) {
+      console.error("Error al obtener comentarios:", error);
+      return NextResponse.json({ error: "Error al obtener comentarios" }, { status: 500 });
+    }
+
+    return NextResponse.json({ comments });
   } catch (error) {
-    console.error("Error al obtener comentarios:", error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    console.error("Error en GET /api/posts/[id]/comments:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
+// --- PUBLICAR UN NUEVO COMENTARIO (POST) ---
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const postId = params.id
-    const { content } = await request.json()
-
-    if (!postId) {
-      return NextResponse.json({ error: "ID de post requerido" }, { status: 400 })
-    }
+    const postId = params.id;
+    const { content } = await request.json();
 
     if (!content) {
-      return NextResponse.json({ error: "Contenido del comentario requerido" }, { status: 400 })
+      return NextResponse.json({ error: "El contenido del comentario es requerido" }, { status: 400 });
     }
 
-    const supabase = createClient()
+    const supabase = createClient();
 
-    // Verificar autenticación
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // Aquí iría la lógica para guardar el comentario en la base de datos
-    // Por ahora, simulamos una respuesta exitosa
-    const comment = {
-      id: Date.now().toString(),
-      content,
-      author: {
-        name: user.user_metadata?.name || user.email || "Usuario",
-        avatar: user.user_metadata?.avatar_url,
-      },
-      timestamp: new Date().toISOString(),
-      likes: 0,
+    // Inserta el nuevo comentario en la tabla 'comments'
+    const { data: newComment, error: insertError } = await supabase
+      .from("comments")
+      .insert({
+        post_id: postId,
+        user_id: user.id,
+        content,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error al guardar comentario:", insertError);
+      return NextResponse.json({ error: "Error al guardar el comentario" }, { status: 500 });
     }
 
-    return NextResponse.json({ comment })
+    return NextResponse.json({ comment: newComment }, { status: 201 });
   } catch (error) {
-    console.error("Error al crear comentario:", error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    console.error("Error en POST /api/posts/[id]/comments:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
