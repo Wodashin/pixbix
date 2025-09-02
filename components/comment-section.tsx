@@ -1,61 +1,100 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent } from "@/components/ui/card"
-import { Heart, MessageCircle, MoreHorizontal } from "lucide-react"
-import { useAuth } from "@/components/auth-provider-supabase"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
+import { useAuth } from "@/components/auth-provider-supabase";
+import { toast } from "sonner";
+
+// Interfaces para tipar los datos que recibimos
+interface Author {
+  name: string;
+  avatar?: string;
+}
 
 interface Comment {
-  id: string
-  content: string
-  author: {
-    name: string
-    avatar?: string
-  }
-  timestamp: string
-  likes: number
-  replies?: Comment[]
+  id: string;
+  content: string;
+  author: Author;
+  timestamp: string;
+  likes: number;
+  replies?: Comment[];
 }
 
 interface CommentSectionProps {
-  postId: string
-  comments: Comment[]
+  postId: string;
 }
 
-export function CommentSection({ postId, comments: initialComments }: CommentSectionProps) {
-  const { user } = useAuth()
-  const [comments, setComments] = useState<Comment[]>(initialComments)
-  const [newComment, setNewComment] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export function CommentSection({ postId }: CommentSectionProps) {
+  const { user } = useAuth();
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Función para obtener los comentarios
+  const fetchComments = async () => {
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`);
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data.comments || []);
+      }
+    } catch (error) {
+      console.error("Error al cargar comentarios:", error);
+      toast.error("No se pudieron cargar los comentarios.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Cargar comentarios cuando el componente se monta o el postId cambia
+  useEffect(() => {
+    if (postId) {
+      fetchComments();
+    }
+  }, [postId]);
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !user) return
-
-    setIsSubmitting(true)
-    try {
-      // Aquí iría la lógica para enviar el comentario a la API
-      const comment: Comment = {
-        id: Date.now().toString(),
-        content: newComment,
-        author: {
-          name: user.user_metadata?.name || user.email || "Usuario",
-          avatar: user.user_metadata?.avatar_url,
-        },
-        timestamp: new Date().toISOString(),
-        likes: 0,
-      }
-
-      setComments([comment, ...comments])
-      setNewComment("")
-    } catch (error) {
-      console.error("Error al enviar comentario:", error)
-    } finally {
-      setIsSubmitting(false)
+    if (!newComment.trim() || !user) {
+      toast.error("Debes iniciar sesión y escribir un comentario.");
+      return;
     }
-  }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newComment }),
+      });
+
+      if (response.ok) {
+        const { comment: createdComment } = await response.json();
+        // Para mostrar el autor correctamente, lo construimos con los datos del usuario actual
+        const commentWithAuthor = {
+          ...createdComment,
+          author: {
+            name: user.user_metadata?.name || user.email,
+            avatar: user.user_metadata?.avatar_url,
+          }
+        }
+        setComments((prevComments) => [...prevComments, commentWithAuthor]);
+        setNewComment("");
+        toast.success("Comentario publicado.");
+      } else {
+        toast.error("No se pudo publicar tu comentario.");
+      }
+    } catch (error) {
+      console.error("Error al enviar comentario:", error);
+      toast.error("Error de conexión al enviar comentario.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -98,39 +137,25 @@ export function CommentSection({ postId, comments: initialComments }: CommentSec
 
       {/* Lista de comentarios */}
       <div className="space-y-4">
-        {comments.map((comment) => (
-          <Card key={comment.id} className="bg-slate-800 border-slate-700">
-            <CardContent className="p-4">
-              <div className="flex space-x-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={comment.author.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{comment.author.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <span className="font-semibold text-white">{comment.author.name}</span>
-                    <span className="text-xs text-slate-400">{new Date(comment.timestamp).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-slate-300 mb-3">{comment.content}</p>
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center space-x-1 text-slate-400 hover:text-red-400">
-                      <Heart className="h-4 w-4" />
-                      <span>{comment.likes}</span>
-                    </button>
-                    <button className="flex items-center space-x-1 text-slate-400 hover:text-cyan-400">
-                      <MessageCircle className="h-4 w-4" />
-                      <span>Responder</span>
-                    </button>
-                    <button className="text-slate-400 hover:text-slate-300">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
+        {isLoading ? (
+            <p className="text-slate-400 text-center">Cargando comentarios...</p>
+        ) : comments.length > 0 ? (
+          comments.map((comment) => (
+            <Card key={comment.id} className="bg-slate-800 border-slate-700">
+              <CardContent className="p-4">
+                <div className="flex space-x-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={comment.author.avatar || "/placeholder.svg"} />
+                    <AvatarFallback>{comment.author.name?.[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="font-semibold text-white">{comment.author.name}</span>
+                      <span className="text-xs text-slate-400">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-slate-300 mb-3">{comment.content}</p>
+                    <div className="flex items-center space-x-4">
+                      {/* Lógica para likes en comentarios (a implementar) */}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
