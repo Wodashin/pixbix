@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
         image_url, // Guarda la URL de la imagen si existe
         tags: tags || [],
       })
-      .select()
+      // Especificamos qué columnas devolver para evitar errores con relaciones
+      .select("id, content, image_url, tags, created_at, user_id")
       .single();
 
     if (insertError) {
