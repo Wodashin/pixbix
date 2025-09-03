@@ -5,23 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { useAuth } from "@/components/auth-provider-supabase";
 import { toast } from "sonner";
 
-// Interfaces para tipar los datos que recibimos
+// Definimos interfaces para que nuestro código sepa qué forma tienen los datos
 interface Author {
-  name: string;
-  avatar?: string;
+  display_name: string;
+  avatar_url?: string;
 }
 
 interface Comment {
   id: string;
   content: string;
   author: Author;
-  timestamp: string;
-  likes: number;
-  replies?: Comment[];
+  created_at: string;
 }
 
 interface CommentSectionProps {
@@ -35,32 +32,34 @@ export function CommentSection({ postId }: CommentSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Función para obtener los comentarios
+  // Función para obtener los comentarios desde nuestra API
   const fetchComments = async () => {
+    if (!postId) return;
+    setIsLoading(true);
     try {
       const response = await fetch(`/api/posts/${postId}/comments`);
       if (response.ok) {
         const data = await response.json();
         setComments(data.comments || []);
+      } else {
+        toast.error("No se pudieron cargar los comentarios.");
       }
     } catch (error) {
-      console.error("Error al cargar comentarios:", error);
-      toast.error("No se pudieron cargar los comentarios.");
+      toast.error("Error de red al cargar comentarios.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Cargar comentarios cuando el componente se monta o el postId cambia
+  // Cargar los comentarios cuando el componente se muestra por primera vez
   useEffect(() => {
-    if (postId) {
-      fetchComments();
-    }
+    fetchComments();
   }, [postId]);
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim() || !user) {
-      toast.error("Debes iniciar sesión y escribir un comentario.");
+    if (!newComment.trim()) return;
+    if (!user) {
+      toast.error("Debes iniciar sesión para poder comentar.");
       return;
     }
 
@@ -72,25 +71,25 @@ export function CommentSection({ postId }: CommentSectionProps) {
         body: JSON.stringify({ content: newComment }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const { comment: createdComment } = await response.json();
-        // Para mostrar el autor correctamente, lo construimos con los datos del usuario actual
+        // Para que el nuevo comentario se muestre al instante, lo construimos con los datos del usuario actual
         const commentWithAuthor = {
-          ...createdComment,
+          ...data.comment,
           author: {
-            name: user.user_metadata?.name || user.email,
-            avatar: user.user_metadata?.avatar_url,
+            display_name: user.user_metadata?.name || user.email,
+            avatar_url: user.user_metadata?.avatar_url,
           }
-        }
+        };
         setComments((prevComments) => [...prevComments, commentWithAuthor]);
         setNewComment("");
         toast.success("Comentario publicado.");
       } else {
-        toast.error("No se pudo publicar tu comentario.");
+        toast.error(data.error || "No se pudo publicar tu comentario.");
       }
     } catch (error) {
-      console.error("Error al enviar comentario:", error);
-      toast.error("Error de conexión al enviar comentario.");
+      toast.error("Error de conexión al enviar el comentario.");
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +98,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
   return (
     <div className="space-y-4">
       {/* Formulario para nuevo comentario */}
-      {user ? (
+      {user && (
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
             <div className="flex space-x-3">
@@ -127,35 +126,36 @@ export function CommentSection({ postId }: CommentSectionProps) {
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4 text-center">
-            <p className="text-slate-400">Inicia sesión para comentar</p>
-          </CardContent>
-        </Card>
       )}
 
       {/* Lista de comentarios */}
       <div className="space-y-4">
         {isLoading ? (
-            <p className="text-slate-400 text-center">Cargando comentarios...</p>
+          <p className="text-slate-400 text-center py-4">Cargando comentarios...</p>
         ) : comments.length > 0 ? (
           comments.map((comment) => (
             <Card key={comment.id} className="bg-slate-800 border-slate-700">
               <CardContent className="p-4">
                 <div className="flex space-x-3">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={comment.author.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>{comment.author.name?.[0]}</AvatarFallback>
+                    <AvatarImage src={comment.author?.avatar_url || "/placeholder.svg"} />
+                    <AvatarFallback>{comment.author?.display_name?.[0] || 'U'}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-white">{comment.author.name}</span>
-                      <span className="text-xs text-slate-400">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                      <span className="font-semibold text-white">{comment.author?.display_name || "Usuario"}</span>
+                      <span className="text-xs text-slate-400">{new Date(comment.created_at).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-slate-300 mb-3">{comment.content}</p>
-                    <div className="flex items-center space-x-4">
-                      {/* Lógica para likes en comentarios (a implementar) */}
-                    </div>
+                    <p className="text-slate-300">{comment.content}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-slate-400 text-center py-4">Sé el primero en comentar.</p>
+        )}
+      </div>
+    </div>
+  );
+}
