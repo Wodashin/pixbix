@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         tags,
         created_at,
         user_id,
-        user:users (
+        user:users!posts_user_id_fkey (
           display_name,
           username,
           avatar_url
